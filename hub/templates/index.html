@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Dashboard</h1>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="card p-6">
+        <h2 class="text-lg font-semibold mb-2">Active Nodes</h2>
+        <p class="text-4xl font-bold text-teal-400" id="node-count">-</p>
+    </div>
+    <div class="card p-6">
+        <h2 class="text-lg font-semibold mb-2">Recent Alerts</h2>
+        <p class="text-4xl font-bold text-red-400" id="alert-count">-</p>
+    </div>
+    <div class="card p-6">
+        <h2 class="text-lg font-semibold mb-2">System Status</h2>
+        <p class="text-xl font-bold text-green-400">Online</p>
+    </div>
+</div>
+<div class="mt-8">
+    <h2 class="text-xl font-semibold mb-4">Simulation</h2>
+    <button id="simulate-alert" class="btn-danger px-4 py-2 rounded mr-2">Simulate Alert</button>
+    <button id="simulate-heartbeat" class="btn-primary px-4 py-2 rounded">Simulate Heartbeat</button>
+</div>
+<script>
+    fetch('/api/nodes').then(r => r.json()).then(data => { document.getElementById('node-count').textContent = data.length; });
+    fetch('/api/alerts').then(r => r.json()).then(data => { document.getElementById('alert-count').textContent = data.length; });
+</script>
+{% endblock %}

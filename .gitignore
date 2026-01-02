@@ -1,0 +1,68 @@
+# Forest Guardian - .gitignore
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.env
+venv/
+ENV/
+.env
+.env.*
+
+# Jupyter
+.ipynb_checkpoints
+
+# Arduino
+*.elf
+*.bin
+*.hex
+*.ino.*
+*.cpp.*
+*.o
+*.d
+*.dep
+*.map
+*.sdf
+*.suo
+*.log
+*.pyc
+*.DS_Store
+
+# VSCode
+.vscode/
+
+# Model files
+ml/models/*
+!ml/models/.gitkeep
+
+# Data
+ml/data/*
+!ml/data/chainsaw/
+!ml/data/forest/
+!ml/data/hard_negatives/
+
+# Flask
+instance/
+*.db
+*.sqlite3
+
+# Azure
+azure/local.settings.json
+
+# Logs
+*.log
+logs/
+
+# Misc
+*.swp
+*.bak
+*.tmp
+
+# Node
+node_modules/
+
+# Audio
+hub/static/audio/*
+!hub/static/audio/alert.mp3

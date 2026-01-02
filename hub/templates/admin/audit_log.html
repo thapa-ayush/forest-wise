@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Audit Log</h1>
+<table class="w-full text-left">
+    <thead>
+        <tr class="border-b border-gray-700">
+            <th class="py-2">User</th>
+            <th>Action</th>
+            <th>Details</th>
+            <th>IP</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for l in logs %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2">{{ l.user_id }}</td>
+            <td>{{ l.action }}</td>
+            <td>{{ l.details }}</td>
+            <td>{{ l.ip_address }}</td>
+            <td>{{ l.timestamp }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

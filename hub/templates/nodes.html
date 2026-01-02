@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Nodes</h1>
+<table class="w-full text-left">
+    <thead>
+        <tr class="border-b border-gray-700">
+            <th class="py-2">Node ID</th>
+            <th>Last Seen</th>
+            <th>Battery</th>
+            <th>Location</th>
+            <th>Status</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for n in nodes %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2">{{ n.node_id }}</td>
+            <td>{{ n.last_seen }}</td>
+            <td>{{ n.battery }}%</td>
+            <td>{{ n.lat }}, {{ n.lon }}</td>
+            <td>{{ n.status }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

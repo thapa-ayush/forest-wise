@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Live Map</h1>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<div id="map" class="w-full h-96 rounded"></div>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    const map = L.map('map').setView([43.65, -79.38], 10);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '&copy; OSM' }).addTo(map);
+    fetch('/api/nodes').then(r => r.json()).then(nodes => {
+        nodes.forEach(n => {
+            L.circleMarker([n.lat, n.lon], { color: '#38b2ac', radius: 8 }).addTo(map).bindPopup(`Node: ${n.node_id}<br>Battery: ${n.battery}%`);
+        });
+    });
+    fetch('/api/alerts').then(r => r.json()).then(alerts => {
+        alerts.forEach(a => {
+            L.circleMarker([a.lat, a.lon], { color: '#f56565', radius: 10 }).addTo(map).bindPopup(`Alert: ${a.confidence}%<br>Time: ${a.timestamp}`);
+        });
+    });
+</script>
+{% endblock %}

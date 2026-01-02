@@ -1,0 +1,36 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">Alerts</h1>
+<table class="w-full text-left">
+    <thead>
+        <tr class="border-b border-gray-700">
+            <th class="py-2">ID</th>
+            <th>Node</th>
+            <th>Confidence</th>
+            <th>Location</th>
+            <th>Time</th>
+            <th>Responded</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for a in alerts %}
+        <tr class="border-b border-gray-800">
+            <td class="py-2">{{ a.id }}</td>
+            <td>{{ a.node_id }}</td>
+            <td>{{ a.confidence }}%</td>
+            <td>{{ a.lat }}, {{ a.lon }}</td>
+            <td>{{ a.timestamp }}</td>
+            <td>{{ 'Yes' if a.responded else 'No' }}</td>
+            <td>
+                {% if not a.responded %}
+                <form method="post" action="/api/alerts/{{ a.id }}/respond">
+                    <button class="btn-primary px-2 py-1 rounded text-xs">Respond</button>
+                </form>
+                {% endif %}
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

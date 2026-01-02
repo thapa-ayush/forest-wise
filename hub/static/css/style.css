@@ -1,0 +1,40 @@
+/* style.css - Forest Guardian Hub */
+:root {
+    --bg-dark: #181c20;
+    --bg-card: #23272b;
+    --accent: #38b2ac;
+    --text: #e2e8f0;
+    --danger: #f56565;
+}
+body {
+    background: var(--bg-dark);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+}
+.card {
+    background: var(--bg-card);
+    border-radius: 1rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+.btn-primary {
+    background: var(--accent);
+    color: #181c20;
+}
+.btn-danger {
+    background: var(--danger);
+    color: #fff;
+}
+#map {
+    height: 60vh;
+    border-radius: 1rem;
+}
+.alert-row {
+    border-left: 4px solid var(--accent);
+    padding-left: 0.5rem;
+}
+.alert-row.danger {
+    border-color: var(--danger);
+}
+.navbar {
+    background: var(--bg-card);
+}

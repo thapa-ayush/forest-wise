@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="max-w-md mx-auto card p-8 mt-20">
+    <h1 class="text-2xl font-bold mb-6 text-center">Login</h1>
+    <form method="post">
+        <label class="block mb-2">Username</label>
+        <input name="username" class="w-full p-2 rounded bg-gray-700 mb-4" required>
+        <label class="block mb-2">Password</label>
+        <input name="password" type="password" class="w-full p-2 rounded bg-gray-700 mb-4" required>
+        <button class="btn-primary w-full py-2 rounded">Login</button>
+    </form>
+</div>
+{% endblock %}

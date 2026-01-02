@@ -1,0 +1,12 @@
+{
+  "IsEncrypted": false,
+  "Values": {
+    "AzureWebJobsStorage": "<your-storage-connection-string>",
+    "FUNCTIONS_WORKER_RUNTIME": "python",
+    "IOTHUB_EVENTHUB_CONNECTION": "<your-iothub-eventhub-connection>",
+    "COSMOS_ENDPOINT": "<your-cosmos-endpoint>",
+    "COSMOS_KEY": "<your-cosmos-key>",
+    "AZURE_OPENAI_ENDPOINT": "<your-openai-endpoint>",
+    "AZURE_OPENAI_KEY": "<your-openai-key>"
+  }
+}

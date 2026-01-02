@@ -1,0 +1,14 @@
+# ML requirements for Forest Guardian
+numpy
+scipy
+librosa
+soundfile
+matplotlib
+scikit-learn
+tensorflow==2.15.0
+tflite-support
+python-dotenv
+azureml-sdk
+jupyter
+pydub
+requests

@@ -1,0 +1,13 @@
+{% extends 'base.html' %}
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">AI Reports</h1>
+<div class="card p-6 mb-6">
+    <h2 class="text-lg font-semibold mb-2">Daily Report</h2>
+    <pre id="daily-report" class="whitespace-pre-wrap text-sm text-gray-300">Loading...</pre>
+</div>
+<script>
+    fetch('/api/reports/daily').then(r => r.json()).then(data => {
+        document.getElementById('daily-report').textContent = data.report || 'No report available.';
+    });
+</script>
+{% endblock %}
