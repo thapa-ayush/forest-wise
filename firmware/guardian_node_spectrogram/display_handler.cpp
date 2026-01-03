@@ -121,16 +121,7 @@ void display_status(DisplayMode mode, int battery_percent, bool gps_fix)
         display.setFont(u8g2_font_helvB10_tr);
         display.drawStr(20, 30, "LISTENING");
         display.setFont(u8g2_font_6x10_tf);
-        display.drawStr(10, 45, "Monitoring audio...");
-
-        // Draw animated sound bars
-        static uint8_t bar_anim = 0;
-        bar_anim = (bar_anim + 1) % 8;
-        for (int i = 0; i < 7; i++)
-        {
-            int h = 4 + ((i + bar_anim) % 5) * 3;
-            display.drawBox(25 + i * 12, 62 - h, 8, h);
-        }
+        display.drawStr(10, 50, "See live stats...");
         break;
     }
 
@@ -242,96 +233,156 @@ void display_progress(const char *title, int percent)
 
 void display_detailed_status(int battery_percent, bool gps_fix, double lat, double lon, bool mic_ok, float audio_level, int alert_count)
 {
+    // Redirect to live stats (compatibility wrapper)
+    display_live_stats(battery_percent, gps_fix, lat, lon, mic_ok, audio_level, 0, alert_count, 0, 0, 0, false);
+}
+
+// NEW: Single page with all live stats and LoRa/hub status
+void display_live_stats(int battery_percent, bool gps_fix, double lat, double lon,
+                        bool mic_ok, float audio_level, float energy,
+                        int alert_count, int specs_sent,
+                        int lora_tx_count, unsigned long last_tx_time, bool hub_ack)
+{
     display.clearBuffer();
     display.setFont(u8g2_font_5x7_tf);
 
-    // Header with clear status indicator
-    display.drawStr(0, 7, "FOREST GUARDIAN");
-    char bat_str[10];
-    snprintf(bat_str, sizeof(bat_str), "%d%%", battery_percent);
-    display.drawStr(105, 7, bat_str);
+    // === TOP ROW: Node ID | Status | Battery ===
+    display.drawStr(0, 7, NODE_ID);
 
-    // Status indicator box - shows system is ACTIVE
-    if (mic_ok)
+    // Status indicator (filled=OK, empty=error)
+    if (mic_ok && gps_fix)
     {
-        display.drawBox(85, 0, 15, 8); // Filled = OK
-        display.setDrawColor(0);
-        display.drawStr(87, 7, "OK");
-        display.setDrawColor(1);
+        display.drawDisc(70, 4, 3);
+    }
+    else if (mic_ok)
+    {
+        display.drawCircle(70, 4, 3);
+        display.drawPixel(70, 4);
     }
     else
     {
-        display.drawFrame(85, 0, 15, 8);
-        display.drawStr(87, 7, "!!");
+        display.drawCircle(70, 4, 3);
     }
+
+    // Battery
+    char bat_str[8];
+    snprintf(bat_str, sizeof(bat_str), "%d%%", battery_percent);
+    display.drawStr(108, 7, bat_str);
+
+    // Battery icon mini
+    display.drawFrame(95, 1, 10, 6);
+    display.drawBox(105, 2, 2, 4);
+    int bat_fill = (battery_percent * 8) / 100;
+    if (bat_fill > 0)
+        display.drawBox(96, 2, bat_fill, 4);
+
     display.drawHLine(0, 9, 128);
 
-    // GPS Section
+    // === ROW 2: GPS coordinates or status ===
     display.drawStr(0, 18, "GPS:");
     if (gps_fix)
     {
-        char lat_str[16], lon_str[16];
-        snprintf(lat_str, sizeof(lat_str), "%.4f", lat);
-        snprintf(lon_str, sizeof(lon_str), "%.4f", lon);
-        display.drawStr(22, 18, lat_str);
-        display.drawStr(68, 18, lon_str);
+        char coord_str[24];
+        snprintf(coord_str, sizeof(coord_str), "%.4f,%.4f", lat, lon);
+        display.drawStr(22, 18, coord_str);
     }
     else
     {
-        display.drawStr(22, 18, "Searching...");
+        display.drawStr(22, 18, "No Fix");
     }
 
-    // Mic Section with audio bar
-    display.drawStr(0, 28, "MIC:");
-    if (mic_ok)
-    {
-        // Audio level bar
-        display.drawFrame(22, 22, 80, 8);
-        int level_width = (int)(audio_level * 76);
-        if (level_width > 76)
-            level_width = 76;
-        if (level_width < 2 && audio_level > 0)
-            level_width = 2;
-        display.drawBox(24, 24, level_width, 4);
+    // === ROW 3: Audio level bar ===
+    display.drawStr(0, 27, "AUD:");
+    display.drawFrame(22, 21, 60, 7);
+    int level_width = (int)(audio_level * 56);
+    if (level_width > 56)
+        level_width = 56;
+    if (level_width > 0)
+        display.drawBox(24, 23, level_width, 3);
 
-        char lvl_str[8];
-        snprintf(lvl_str, sizeof(lvl_str), "%d%%", (int)(audio_level * 100));
-        display.drawStr(105, 28, lvl_str);
-    }
-    else
-    {
-        display.drawStr(22, 28, "ERROR!");
-    }
+    // Energy value
+    char energy_str[10];
+    snprintf(energy_str, sizeof(energy_str), "E:%.2f", energy);
+    display.drawStr(85, 27, energy_str);
 
-    // Alert counter - important for user to see detections
-    display.drawHLine(0, 32, 128);
-    display.setFont(u8g2_font_6x10_tf);
-    char alert_str[24];
-    snprintf(alert_str, sizeof(alert_str), "DETECTIONS: %d", alert_count);
-    display.drawStr(25, 44, alert_str);
+    // === ROW 4: Alerts & Specs sent ===
+    display.drawStr(0, 36, "ALT:");
+    char alert_str[6];
+    snprintf(alert_str, sizeof(alert_str), "%d", alert_count);
+    display.drawStr(22, 36, alert_str);
 
-    // Status line - animated to show system is active
-    display.drawHLine(0, 50, 128);
+    display.drawStr(45, 36, "TX:");
+    char tx_str[6];
+    snprintf(tx_str, sizeof(tx_str), "%d", specs_sent);
+    display.drawStr(62, 36, tx_str);
+
+    // Mic status
+    display.drawStr(85, 36, mic_ok ? "MIC:OK" : "MIC:!!");
+
+    display.drawHLine(0, 38, 128);
+
+    // === BOTTOM: LoRa & Hub Status ===
     display.setFont(u8g2_font_5x7_tf);
 
-    // Blinking indicator dot
-    static unsigned long last_blink = 0;
-    static bool blink_on = true;
-    if (millis() - last_blink > 500)
-    {
-        blink_on = !blink_on;
-        last_blink = millis();
-    }
+    // LoRa TX count
+    display.drawStr(0, 48, "LORA TX:");
+    char lora_str[8];
+    snprintf(lora_str, sizeof(lora_str), "%d", lora_tx_count);
+    display.drawStr(45, 48, lora_str);
 
-    if (blink_on)
+    // Last TX time
+    display.drawStr(65, 48, "Last:");
+    if (last_tx_time > 0)
     {
-        display.drawDisc(10, 58, 3); // Filled circle when "on"
+        unsigned long ago = (millis() - last_tx_time) / 1000;
+        char time_str[10];
+        if (ago < 60)
+        {
+            snprintf(time_str, sizeof(time_str), "%lus", ago);
+        }
+        else
+        {
+            snprintf(time_str, sizeof(time_str), "%lum", ago / 60);
+        }
+        display.drawStr(95, 48, time_str);
     }
     else
     {
-        display.drawCircle(10, 58, 3); // Empty circle when "off"
+        display.drawStr(95, 48, "--");
     }
-    display.drawStr(18, 60, "MONITORING ACTIVE");
+
+    // Hub connection status row
+    display.drawStr(0, 58, "HUB:");
+    if (hub_ack)
+    {
+        display.drawStr(25, 58, "CONNECTED");
+        display.drawDisc(95, 55, 4); // Filled = connected
+    }
+    else
+    {
+        display.drawStr(25, 58, "WAITING");
+        display.drawCircle(95, 55, 4); // Empty = not yet
+    }
+
+    // Hopping indicator (blinking shows system is active)
+    static bool hop_blink = false;
+    static unsigned long last_hop_blink = 0;
+    if (millis() - last_hop_blink > 500)
+    {
+        hop_blink = !hop_blink;
+        last_hop_blink = millis();
+    }
+
+    // Node active indicator
+    display.setFont(u8g2_font_4x6_tf);
+    if (hop_blink)
+    {
+        display.drawDisc(120, 55, 4);
+    }
+    else
+    {
+        display.drawCircle(120, 55, 4);
+    }
 
     display.sendBuffer();
 }

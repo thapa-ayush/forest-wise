@@ -36,9 +36,9 @@
 #define I2S_WS 6  // Word Select (LRCK) - GPIO6, Pin 17 left
 #define I2S_SD 5  // Serial Data (DOUT) - GPIO5, Pin 16 left
 #define I2S_PORT I2S_NUM_0
-#define SAMPLE_RATE 16000       // 16kHz
-#define AUDIO_BUFFER_SIZE 17000 // ~1 second + margin for TFLite (32 frames × 512 hop + 512 FFT)
-#define AUDIO_CHUNK_SIZE 17000  // Full buffer for TFLite inference
+#define SAMPLE_RATE 16000      // 16kHz
+#define AUDIO_BUFFER_SIZE 8192 // ~0.5 second (reduced for memory)
+#define AUDIO_CHUNK_SIZE 8192  // Match buffer size
 
 // ============================================
 // GPS Module (GY-NEO6MV2)
@@ -74,25 +74,34 @@
 // ============================================
 // Detection & Timing Settings
 // ============================================
-// DEMO MODE: Set to 1 for Imagine Cup demo (phone/laptop speakers)
-//            Set to 0 for real deployment (actual chainsaws)
+// *** DEMO_MODE SWITCH ***
+// Set to 1 for Imagine Cup demo (chainsaw from phone/laptop speakers)
+// Set to 0 for real forest deployment (actual chainsaws)
+//
+// WHY: Phone speakers can't produce low frequencies (<300Hz)
+//      Real chainsaws have strong bass rumble that phones can't reproduce
+//      Demo mode uses different detection criteria optimized for speakers
 #define DEMO_MODE 1
 
 #if DEMO_MODE
-// Demo settings - more sensitive for phone/laptop speakers
-// Phone speakers can't reproduce chainsaw's low frequencies well
-#define DETECTION_THRESHOLD 0.18f // 18% smoothed confidence (for Edge Impulse mode)
-#define DETECTION_RAW_MIN 0.15f   // 15% raw detection counts
-#define ANOMALY_THRESHOLD 0.15f   // 15% energy threshold for spectrogram anomaly
-#define CONSECUTIVE_REQUIRED 2    // 2 consecutive hits
-#define LORA_COOLDOWN_MS 5000     // 5s cooldown for demo
+// Demo settings - for chainsaw audio from phone/laptop speakers
+// Chainsaw detection requires:
+// - LOUD sound (energy > threshold)
+// - LOW frequency rumble (engine, 50-300Hz) - voices lack this!
+// - BROADBAND spectrum (energy across all frequencies)
+// - SUSTAINED sound (low coefficient of variation)
+#define DETECTION_THRESHOLD 0.25f // 25% smoothed confidence
+#define DETECTION_RAW_MIN 0.20f   // 20% raw detection counts
+#define ANOMALY_THRESHOLD 0.55f   // 55% energy threshold
+#define CONSECUTIVE_REQUIRED 4    // 4 consecutive hits (stricter)
+#define LORA_COOLDOWN_MS 10000    // 10s cooldown for demo
 #else
 // Production settings - for real chainsaws in forest
 // Real chainsaws produce 50-90% confidence (loud, sustained)
 #define DETECTION_THRESHOLD 0.35f // 35% smoothed confidence
 #define DETECTION_RAW_MIN 0.25f   // 25% raw detection counts
-#define ANOMALY_THRESHOLD 0.25f   // 25% energy threshold for spectrogram anomaly
-#define CONSECUTIVE_REQUIRED 3    // 3 consecutive hits
+#define ANOMALY_THRESHOLD 0.40f   // 40% energy threshold for spectrogram anomaly
+#define CONSECUTIVE_REQUIRED 4    // 4 consecutive hits
 #define LORA_COOLDOWN_MS 30000    // 30s cooldown
 #endif
 
@@ -101,11 +110,11 @@
 // ============================================
 // Spectrogram Settings (for Azure AI Vision mode)
 // ============================================
-#define SPEC_SAMPLE_RATE 16000    // Match audio sample rate
-#define SPEC_FFT_SIZE 256         // FFT window size
-#define SPEC_HOP_SIZE 128         // FFT hop size
-#define SPEC_NUM_FRAMES 64        // Spectrogram width (time)
-#define SPEC_NUM_BINS 64          // Spectrogram height (frequency)
+#define SPEC_SAMPLE_RATE 16000 // Match audio sample rate
+#define SPEC_FFT_SIZE 256      // FFT window size
+#define SPEC_HOP_SIZE 128      // FFT hop size
+#define SPEC_NUM_FRAMES 64     // Spectrogram width (time)
+#define SPEC_NUM_BINS 64       // Spectrogram height (frequency)
 
 // ============================================
 // Power Management
