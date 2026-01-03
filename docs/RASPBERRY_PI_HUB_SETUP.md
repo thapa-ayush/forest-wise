@@ -1,5 +1,34 @@
 # Forest Guardian - Raspberry Pi LoRa Hub Setup
 
+## Quick Start (One-Click Install) 🚀
+
+```bash
+# 1. Clone or copy the project to your Pi
+cd ~/forest_guardian/hub
+
+# 2. Make scripts executable
+chmod +x install.sh run.sh manage.sh
+
+# 3. Run the installer
+./install.sh
+
+# 4. Edit your Azure credentials
+nano .env
+
+# 5. Start the hub
+./run.sh
+```
+
+**That's it!** Dashboard will be at `http://your-pi-ip:5000`
+
+### Service Management Menu
+```bash
+./manage.sh
+```
+Provides an interactive menu to start/stop/restart, view logs, enable auto-start, etc.
+
+---
+
 ## Overview
 
 The Raspberry Pi serves as the **central hub** that receives alerts from Forest Guardian nodes via LoRa and forwards them to Azure cloud services for verification and ranger notification.
