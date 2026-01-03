@@ -25,28 +25,34 @@ from collections import defaultdict
 
 # Flag to enable/disable actual hardware (for development)
 HARDWARE_ENABLED = False
+GPIO_HANDLE = None  # lgpio handle
 
 try:
     import spidev
-    import RPi.GPIO as GPIO
+    import lgpio
     HARDWARE_ENABLED = True
 except ImportError:
-    logging.warning("RPi.GPIO/spidev not available - running in simulation mode")
+    logging.warning("lgpio/spidev not available - running in simulation mode")
 
 # LoRa Configuration - MUST MATCH NODE SETTINGS!
+# NOTE: SX1262 (node) and SX1276/RFM95W (hub) sync words work differently!
+# RadioLib converts 0x12 -> 0x14xx for SX1262, so hub needs 0x14 to match
 LORA_CONFIG = {
     'frequency': 915.0,       # MHz - same as node
     'bandwidth': 125.0,       # kHz - same as node
     'spreading_factor': 10,   # SF10 - same as node (LORA_SPREADING_FACTOR)
     'coding_rate': 5,         # 4/5 - same as node
-    'sync_word': 0x12,        # Private network - same as node (MUST MATCH!)
+    'sync_word': 0x14,        # RadioLib SX1262 converts 0x12 to 0x14xx
     'tx_power': 14,           # dBm
+    'ldro_enabled': False,    # LDRO must be OFF for SX1262 compatibility
 }
 
-# RFM95W GPIO Pins (BCM numbering)
-LORA_NSS = 8      # CE0 - Chip Select
-LORA_RST = 22     # Reset
-LORA_DIO0 = 25    # Interrupt on RX done
+# RFM95W GPIO Pins (BCM numbering) - Match your wiring!
+# SPI pins (hardware): MISO=GPIO9, MOSI=GPIO10, SCK=GPIO11
+LORA_NSS = 8      # CE0 - Chip Select (managed by SPI driver automatically)
+LORA_RST = 25     # Reset pin
+LORA_DIO0 = 24    # Interrupt on RX done
+USE_HW_CS = True  # Use hardware chip select (SPI driver manages CE0)
 
 # RFM95W Registers
 REG_FIFO = 0x00
@@ -104,29 +110,34 @@ stats = {
 
 
 class LoRaReceiver:
-    """RFM95W LoRa receiver for Raspberry Pi"""
+    """RFM95W LoRa receiver for Raspberry Pi 5 (using lgpio)"""
     
     def __init__(self):
         self.spi = None
         self.running = False
         self.thread = None
+        self.gpio_handle = None
         
         if HARDWARE_ENABLED:
             self._init_hardware()
     
     def _init_hardware(self):
-        """Initialize SPI and GPIO"""
+        """Initialize SPI and GPIO using lgpio for Pi 5 compatibility"""
+        global GPIO_HANDLE
         try:
-            # Setup GPIO
-            GPIO.setmode(GPIO.BCM)
-            GPIO.setwarnings(False)
-            GPIO.setup(LORA_NSS, GPIO.OUT, initial=GPIO.HIGH)
-            GPIO.setup(LORA_RST, GPIO.OUT, initial=GPIO.HIGH)
-            GPIO.setup(LORA_DIO0, GPIO.IN)
+            # Setup GPIO using lgpio (Pi 5 compatible)
+            self.gpio_handle = lgpio.gpiochip_open(0)
+            GPIO_HANDLE = self.gpio_handle
             
-            # Setup SPI
+            # Note: NSS/CE0 (GPIO 8) is managed by SPI driver - don't claim it manually
+            if not USE_HW_CS:
+                lgpio.gpio_claim_output(self.gpio_handle, LORA_NSS, 1)  # NSS high (deselect)
+            lgpio.gpio_claim_output(self.gpio_handle, LORA_RST, 1)  # RST high
+            lgpio.gpio_claim_input(self.gpio_handle, LORA_DIO0)
+            
+            # Setup SPI (CE0 auto-managed by driver)
             self.spi = spidev.SpiDev()
-            self.spi.open(0, 0)
+            self.spi.open(0, 0)  # Bus 0, CE0
             self.spi.max_speed_hz = 5000000
             self.spi.mode = 0
             
@@ -153,22 +164,26 @@ class LoRaReceiver:
     
     def _reset(self):
         """Hardware reset"""
-        GPIO.output(LORA_RST, GPIO.LOW)
+        lgpio.gpio_write(self.gpio_handle, LORA_RST, 0)
         time.sleep(0.01)
-        GPIO.output(LORA_RST, GPIO.HIGH)
+        lgpio.gpio_write(self.gpio_handle, LORA_RST, 1)
         time.sleep(0.01)
     
     def _write_register(self, reg, value):
         """Write to RFM95W register"""
-        GPIO.output(LORA_NSS, GPIO.LOW)
+        if not USE_HW_CS:
+            lgpio.gpio_write(self.gpio_handle, LORA_NSS, 0)
         self.spi.xfer2([reg | 0x80, value])
-        GPIO.output(LORA_NSS, GPIO.HIGH)
+        if not USE_HW_CS:
+            lgpio.gpio_write(self.gpio_handle, LORA_NSS, 1)
     
     def _read_register(self, reg):
         """Read from RFM95W register"""
-        GPIO.output(LORA_NSS, GPIO.LOW)
+        if not USE_HW_CS:
+            lgpio.gpio_write(self.gpio_handle, LORA_NSS, 0)
         result = self.spi.xfer2([reg & 0x7F, 0x00])
-        GPIO.output(LORA_NSS, GPIO.HIGH)
+        if not USE_HW_CS:
+            lgpio.gpio_write(self.gpio_handle, LORA_NSS, 1)
         return result[1]
     
     def _configure_lora(self):
@@ -232,13 +247,26 @@ class LoRaReceiver:
         # Check IRQ flags
         irq = self._read_register(REG_IRQ_FLAGS)
         
+        # Debug: Log IRQ status periodically
+        if hasattr(self, '_irq_check_count'):
+            self._irq_check_count += 1
+        else:
+            self._irq_check_count = 0
+        
+        if self._irq_check_count % 1000 == 0:
+            mode = self._read_register(REG_OP_MODE)
+            logging.debug(f"[LoRa] IRQ: {hex(irq)}, Mode: {hex(mode)}")
+        
         # RX done (bit 6)?
         if not (irq & 0x40):
             return None
         
+        logging.info(f"[LoRa] Packet detected! IRQ={hex(irq)}")
+        
         # CRC error?
         if irq & 0x20:
             logging.warning("CRC error in received packet")
+            stats['crc_errors'] += 1
             self._write_register(REG_IRQ_FLAGS, 0xFF)
             return None
         
@@ -278,9 +306,8 @@ class LoRaReceiver:
                         packet, rssi = result
                         self._process_packet(packet, rssi)
                 else:
-                    # Simulation mode - generate test packets
-                    time.sleep(30)  # Simulate occasional packets
-                    self._generate_test_packet()
+                    # No hardware - just wait, don't simulate
+                    time.sleep(1)
                 
                 time.sleep(0.01)  # Small delay to prevent CPU spinning
                 
@@ -585,7 +612,8 @@ class LoRaReceiver:
         if HARDWARE_ENABLED:
             if self.spi:
                 self.spi.close()
-            GPIO.cleanup()
+            if self.gpio_handle is not None:
+                lgpio.gpiochip_close(self.gpio_handle)
         
         logging.info("LoRa receiver stopped")
     
