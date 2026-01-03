@@ -486,7 +486,23 @@ void handle_heartbeat()
         last_lora_tx_time = millis(); // Track TX time for display
 
         last_heartbeat = now;
-        delay(500);
+        
+        // CRITICAL: Wait and listen for ACK immediately after sending!
+        // Hub sends ACK right after receiving our heartbeat
+        Serial.println("[HEARTBEAT] Listening for hub ACK...");
+        delay(100);  // Brief delay for hub to process and respond
+        
+        // Try to receive ACK for up to 2 seconds
+        if (lora_wait_for_ack(2000))
+        {
+            hub_acknowledged = true;
+            hub_ack_time = millis();
+            Serial.println("[HUB] ✅ CONNECTED - ACK received!");
+        }
+        else
+        {
+            Serial.println("[HUB] No ACK received (hub may be offline)");
+        }
 
         change_state(prev_state);
     }
@@ -576,7 +592,7 @@ void loop()
     case STATE_LISTENING:
         handle_audio_anomaly_detection();
         handle_heartbeat();
-        check_hub_connection();  // Check for hub ACK
+        // Note: ACK checking now happens immediately after heartbeat send
         break;
 
     case STATE_ERROR:

@@ -209,8 +209,73 @@ int lora_receive(uint8_t* buffer, size_t max_len, uint16_t timeout_ms)
     }
 }
 
-// Check for hub ACK message
-// ACK format: "ACK:<node_id>" or JSON with "type":"ack"
+// Wait for hub ACK with timeout (blocking)
+// Call this immediately after sending a message to receive the response
+bool lora_wait_for_ack(uint16_t timeout_ms)
+{
+    if (!lora_ready) return false;
+    
+    uint8_t rx_buffer[128];
+    unsigned long start = millis();
+    
+    Serial.print("[LoRa] Waiting for ACK (");
+    Serial.print(timeout_ms);
+    Serial.println("ms timeout)...");
+    
+    // Put radio in receive mode
+    lora.setRxBoostedGainMode(true);
+    
+    while (millis() - start < timeout_ms)
+    {
+        // Try to receive with short timeout
+        int state = lora.receive(rx_buffer, sizeof(rx_buffer) - 1);
+        
+        if (state == RADIOLIB_ERR_NONE)
+        {
+            int len = lora.getPacketLength();
+            if (len > 0 && len < (int)sizeof(rx_buffer))
+            {
+                rx_buffer[len] = 0;  // Null terminate
+                String msg = String((char*)rx_buffer);
+                
+                Serial.print("[LoRa] RX: ");
+                Serial.println(msg);
+                Serial.print("[LoRa] RSSI: ");
+                Serial.print(lora.getRSSI());
+                Serial.print(" dBm, SNR: ");
+                Serial.print(lora.getSNR());
+                Serial.println(" dB");
+                
+                // Check for ACK message - look for any ACK indicator
+                if (msg.indexOf("ack") >= 0 || msg.indexOf("ACK") >= 0 || 
+                    msg.indexOf(NODE_ID) >= 0 || msg.indexOf("hub") >= 0 ||
+                    msg.indexOf("HUB") >= 0)
+                {
+                    Serial.println("[LoRa] ✅ Hub ACK received!");
+                    return true;
+                }
+                else
+                {
+                    Serial.println("[LoRa] Received packet but not ACK, continuing...");
+                }
+            }
+        }
+        else if (state != RADIOLIB_ERR_RX_TIMEOUT)
+        {
+            // Only log non-timeout errors
+            Serial.print("[LoRa] RX error: ");
+            Serial.println(state);
+        }
+        
+        delay(10);  // Small delay before retry
+    }
+    
+    Serial.println("[LoRa] ACK timeout");
+    return false;
+}
+
+// Check for hub ACK message (non-blocking, quick check)
+// Uses CAD to detect channel activity
 bool lora_check_for_ack()
 {
     if (!lora_ready) return false;
@@ -218,45 +283,11 @@ bool lora_check_for_ack()
     uint8_t rx_buffer[128];
     
     // Quick check - use scanChannel to see if anything is being received
-    // This is faster than waiting for full packet
     int activity = lora.scanChannel();
     if (activity == RADIOLIB_PREAMBLE_DETECTED)
     {
         Serial.println("[LoRa] Activity detected, waiting for packet...");
-        
-        // Something detected, wait for packet with short timeout
-        unsigned long start = millis();
-        while (millis() - start < 500)  // 500ms max wait
-        {
-            int state = lora.receive(rx_buffer, sizeof(rx_buffer) - 1);
-            
-            if (state == RADIOLIB_ERR_NONE)
-            {
-                int len = lora.getPacketLength();
-                if (len > 0 && len < sizeof(rx_buffer))
-                {
-                    rx_buffer[len] = 0;  // Null terminate
-                    String msg = String((char*)rx_buffer);
-                    
-                    Serial.print("[LoRa] RX: ");
-                    Serial.println(msg);
-                    
-                    // Check for ACK message - look for any ACK indicator
-                    if (msg.indexOf("ack") >= 0 || msg.indexOf("ACK") >= 0 || 
-                        msg.indexOf(NODE_ID) >= 0 || msg.indexOf("hub") >= 0)
-                    {
-                        Serial.println("[LoRa] ✅ Hub ACK received!");
-                        return true;
-                    }
-                }
-                break;  // Got a packet, exit loop
-            }
-            else if (state == RADIOLIB_ERR_RX_TIMEOUT)
-            {
-                break;  // Timeout, exit
-            }
-            delay(10);
-        }
+        return lora_wait_for_ack(500);  // Use blocking function
     }
     
     return false;

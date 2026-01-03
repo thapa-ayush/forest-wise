@@ -149,9 +149,19 @@ void gps_update()
         Serial.print(gps.hdop.hdop(), 1);
         Serial.print(", Fix: ");
         Serial.print(gps.location.isValid() ? "YES" : "NO");
+        
+        // Age display - show meaningful message
+        unsigned long age = gps.location.age();
         Serial.print(", Age: ");
-        Serial.print(gps.location.age());
-        Serial.println("ms");
+        if (age > 86400000)  // More than 1 day = never updated
+        {
+            Serial.println("NEVER (searching for satellites...)");
+        }
+        else
+        {
+            Serial.print(age);
+            Serial.println("ms");
+        }
     }
 
     // Check for valid fix - TinyGPSPlus considers location valid when GPGGA/GPRMC has fix

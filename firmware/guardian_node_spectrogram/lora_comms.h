@@ -50,7 +50,10 @@ bool lora_is_ready();
 // Returns number of bytes received, 0 if none, -1 on error
 int lora_receive(uint8_t* buffer, size_t max_len, uint16_t timeout_ms = 100);
 
-// Check for hub ACK (returns true if ACK received from hub)
+// Wait for hub ACK with timeout (blocking - call after sending)
+bool lora_wait_for_ack(uint16_t timeout_ms = 2000);
+
+// Check for hub ACK (non-blocking quick check using CAD)
 bool lora_check_for_ack();
 
 // Power management
