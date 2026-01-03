@@ -80,6 +80,8 @@ int total_heartbeats = 0;
 // LoRa/Hub status for display
 unsigned long last_lora_tx_time = 0;
 bool hub_acknowledged = false; // Set to true when hub responds
+unsigned long last_ack_check = 0;  // Track last ACK check time
+unsigned long hub_ack_time = 0;    // When ACK was received
 
 // Audio monitoring
 bool mic_is_working = false;
@@ -488,6 +490,32 @@ void handle_heartbeat()
     }
 }
 
+// Check for hub ACK/response to confirm connection
+void check_hub_connection()
+{
+    unsigned long now = millis();
+    
+    // Check for ACK every 500ms (non-blocking)
+    if (now - last_ack_check > 500)
+    {
+        last_ack_check = now;
+        
+        if (lora_check_for_ack())
+        {
+            hub_acknowledged = true;
+            hub_ack_time = now;
+            Serial.println("[HUB] Connected! ACK received from hub");
+        }
+        
+        // Reset connection status if no ACK for 5 minutes
+        if (hub_acknowledged && (now - hub_ack_time > 300000))
+        {
+            hub_acknowledged = false;
+            Serial.println("[HUB] Connection timeout - no ACK in 5 minutes");
+        }
+    }
+}
+
 void check_battery()
 {
     float battery = read_battery_percent();
@@ -546,6 +574,7 @@ void loop()
     case STATE_LISTENING:
         handle_audio_anomaly_detection();
         handle_heartbeat();
+        check_hub_connection();  // Check for hub ACK
         break;
 
     case STATE_ERROR:

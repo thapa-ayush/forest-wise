@@ -172,6 +172,78 @@ void lora_wake()
     }
 }
 
+// Receive data (non-blocking) - switches to RX briefly then back to standby
+int lora_receive(uint8_t* buffer, size_t max_len)
+{
+    if (!lora_ready) return -1;
+    
+    // Start receive with timeout
+    int state = lora.receive(buffer, max_len);
+    
+    if (state == RADIOLIB_ERR_NONE)
+    {
+        int len = lora.getPacketLength();
+        Serial.print("[LoRa] Received ");
+        Serial.print(len);
+        Serial.println(" bytes");
+        return len;
+    }
+    else if (state == RADIOLIB_ERR_RX_TIMEOUT)
+    {
+        return 0;  // No data (normal)
+    }
+    else
+    {
+        Serial.print("[LoRa] RX error: ");
+        Serial.println(state);
+        return -1;
+    }
+}
+
+// Check for hub ACK message
+// ACK format: "ACK:<node_id>" or JSON with "type":"ack"
+bool lora_check_for_ack()
+{
+    if (!lora_ready) return false;
+    
+    uint8_t rx_buffer[64];
+    
+    // Set receive timeout (short - 100ms)
+    lora.setPacketReceivedAction(nullptr);  // Disable interrupt
+    
+    // Try to receive briefly
+    int state = lora.receive(rx_buffer, sizeof(rx_buffer));
+    
+    if (state == RADIOLIB_ERR_NONE)
+    {
+        int len = lora.getPacketLength();
+        if (len > 0 && len < sizeof(rx_buffer))
+        {
+            rx_buffer[len] = 0;  // Null terminate
+            String msg = String((char*)rx_buffer);
+            
+            Serial.print("[LoRa] RX: ");
+            Serial.println(msg);
+            
+            // Check for ACK message
+            if (msg.indexOf("ACK") >= 0 || msg.indexOf("\"ack\"") >= 0 || msg.indexOf("\"type\":\"ack\"") >= 0)
+            {
+                Serial.println("[LoRa] Hub ACK received!");
+                return true;
+            }
+            
+            // Also accept any message from hub with our node_id
+            if (msg.indexOf(NODE_ID) >= 0)
+            {
+                Serial.println("[LoRa] Hub response with node ID received!");
+                return true;
+            }
+        }
+    }
+    
+    return false;
+}
+
 // Multi-packet spectrogram transmission
 // Sends spectrogram data split across multiple LoRa packets
 int lora_send_spectrogram(const uint8_t* spec_data, size_t spec_len,

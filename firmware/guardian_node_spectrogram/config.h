@@ -105,7 +105,7 @@
 #define LORA_COOLDOWN_MS 30000    // 30s cooldown
 #endif
 
-#define HEARTBEAT_INTERVAL_MS 300000 // 5 minute heartbeat
+#define HEARTBEAT_INTERVAL_MS 30000 // 30 second heartbeat for responsive monitoring
 
 // ============================================
 // Spectrogram Settings (for Azure AI Vision mode)

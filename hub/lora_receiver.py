@@ -242,6 +242,65 @@ class LoRaReceiver:
         # RX continuous mode
         self._write_register(REG_OP_MODE, MODE_LORA | MODE_RX_CONTINUOUS)
     
+    def _transmit_packet(self, data):
+        """Transmit a packet via LoRa"""
+        if not HARDWARE_ENABLED or not self.spi:
+            return False
+        
+        try:
+            # Standby mode first
+            self._write_register(REG_OP_MODE, MODE_LORA | MODE_STDBY)
+            time.sleep(0.01)
+            
+            # Set FIFO address to TX base (0)
+            self._write_register(0x0E, 0x00)  # FIFO TX BASE
+            self._write_register(REG_FIFO_ADDR_PTR, 0x00)
+            
+            # Write data to FIFO
+            if isinstance(data, str):
+                data = data.encode('utf-8')
+            
+            for byte in data:
+                self._write_register(REG_FIFO, byte)
+            
+            # Set payload length
+            self._write_register(REG_PAYLOAD_LENGTH, len(data))
+            
+            # Clear IRQ flags
+            self._write_register(REG_IRQ_FLAGS, 0xFF)
+            
+            # DIO0 = TX done
+            self._write_register(REG_DIO_MAPPING_1, 0x40)
+            
+            # TX mode
+            self._write_register(REG_OP_MODE, MODE_LORA | MODE_TX)
+            
+            # Wait for TX done (timeout 5 sec)
+            timeout = time.time() + 5
+            while time.time() < timeout:
+                irq = self._read_register(REG_IRQ_FLAGS)
+                if irq & 0x08:  # TX done
+                    break
+                time.sleep(0.01)
+            
+            # Clear IRQ and return to RX mode
+            self._write_register(REG_IRQ_FLAGS, 0xFF)
+            self._write_register(REG_DIO_MAPPING_1, 0x00)  # DIO0 = RX done
+            self._start_receive()
+            
+            logging.info(f"[LoRa TX] Sent {len(data)} bytes")
+            return True
+            
+        except Exception as e:
+            logging.error(f"[LoRa TX] Error: {e}")
+            self._start_receive()  # Try to return to RX
+            return False
+    
+    def send_ack(self, node_id):
+        """Send ACK to a node to confirm connection"""
+        ack_msg = json.dumps({"type": "ack", "node_id": node_id, "hub": "forest_guardian"})
+        return self._transmit_packet(ack_msg)
+    
     def _read_packet(self):
         """Read received packet from FIFO"""
         # Check IRQ flags
@@ -345,6 +404,16 @@ class LoRaReceiver:
                 logging.info(f"  🚨 ALERT! Confidence: {message.get('confidence')}%")
             elif message.get('type') == 'heartbeat':
                 stats['heartbeats_received'] += 1
+            elif message.get('type') == 'boot':
+                logging.info(f"  🚀 Node {message.get('node_id')} booted!")
+            
+            # Send ACK to node to confirm connection
+            node_id = message.get('node_id')
+            if node_id:
+                # Small delay before sending ACK
+                time.sleep(0.1)
+                if self.send_ack(node_id):
+                    logging.info(f"  ✅ ACK sent to {node_id}")
             
             # Add to queue for database/web processing
             message_queue.put({
@@ -451,8 +520,8 @@ class LoRaReceiver:
         """Complete spectrogram assembly and queue for Azure AI analysis"""
         session = spectrogram_sessions[session_key]
         
-        # Decompress spectrogram data
-        spec_data = self._decompress_spectrogram(bytes(session['data']))
+        # Decompress spectrogram data (returns data, width, height)
+        spec_data, width, height = self._decompress_spectrogram(bytes(session['data']))
         
         if spec_data is None:
             logging.warning("[Spec] Failed to decompress spectrogram")
@@ -462,11 +531,14 @@ class LoRaReceiver:
         spec_dir = os.path.join(os.path.dirname(__file__), 'static', 'spectrograms')
         os.makedirs(spec_dir, exist_ok=True)
         
-        filename = f"{session['node_id']}_{timestamp.strftime('%Y%m%d_%H%M%S')}.png"
+        # Use .pgm extension since PIL might not be available
+        filename = f"{session['node_id']}_{timestamp.strftime('%Y%m%d_%H%M%S')}.pgm"
         filepath = os.path.join(spec_dir, filename)
         
-        # Save as PNG using simple PGM format (can upgrade to PNG with PIL)
-        self._save_spectrogram_image(spec_data, filepath)
+        # Save spectrogram image with actual dimensions
+        actual_filename = self._save_spectrogram_image(spec_data, filepath, width, height)
+        if actual_filename:
+            filename = actual_filename  # Use actual saved filename
         
         # Queue for Azure AI analysis
         metadata = session['metadata'] or {}
@@ -489,18 +561,27 @@ class LoRaReceiver:
         })
         
         logging.info(f"[Spec] Complete spectrogram from {session['node_id']} saved to {filename}")
-        stats['alerts_received'] += 1
+        stats['spectrograms_received'] += 1
+        
+        # Send ACK to node to confirm spectrogram received
+        if hasattr(self, 'send_ack'):
+            time.sleep(0.1)
+            if self.send_ack(session['node_id']):
+                logging.info(f"  ✅ ACK sent to {session['node_id']} for spectrogram")
     
     def _decompress_spectrogram(self, compressed):
-        """Decompress spectrogram data (RLE + 4-bit quantization)"""
+        """Decompress spectrogram data (RLE + 4-bit quantization)
+        Returns tuple: (data, width, height) or (None, 0, 0) on error
+        """
         try:
             # Check header
             if len(compressed) < 4 or compressed[0] != 0x53 or compressed[1] != 0x50:
                 logging.warning("[Spec] Invalid spectrogram header")
-                return None
+                return None, 0, 0
             
             width = compressed[2]
             height = compressed[3]
+            logging.info(f"[Spec] Decompressing {width}x{height} spectrogram from {len(compressed)} bytes")
             
             # Decode RLE
             quantized = bytearray()
@@ -526,39 +607,53 @@ class LoRaReceiver:
                 spec_data.append(high)
                 spec_data.append(low)
             
-            # Ensure correct size (64x64 = 4096)
+            # Ensure correct size
             expected_size = width * height
+            logging.info(f"[Spec] Decompressed to {len(spec_data)} bytes, expected {expected_size}")
+            
             if len(spec_data) < expected_size:
                 spec_data.extend([0] * (expected_size - len(spec_data)))
             elif len(spec_data) > expected_size:
                 spec_data = spec_data[:expected_size]
             
-            return bytes(spec_data)
+            return bytes(spec_data), width, height
             
         except Exception as e:
             logging.error(f"Spectrogram decompression error: {e}")
-            return None
+            return None, 0, 0
     
-    def _save_spectrogram_image(self, spec_data, filepath):
-        """Save spectrogram as image file"""
+    def _save_spectrogram_image(self, spec_data, filepath, width=64, height=64):
+        """Save spectrogram as image file. Returns actual filename used."""
         try:
             # Try to use PIL if available for PNG
             from PIL import Image
             import numpy as np
             
-            width = height = 64
             img_array = np.frombuffer(spec_data, dtype=np.uint8).reshape((height, width))
             img = Image.fromarray(img_array, mode='L')
-            img.save(filepath)
-            logging.info(f"[Spec] Saved PNG image: {filepath}")
+            png_path = filepath.replace('.pgm', '.png')
+            img.save(png_path)
+            logging.info(f"[Spec] Saved {width}x{height} PNG image: {png_path}")
+            return os.path.basename(png_path)
             
         except ImportError:
             # Fallback to PGM format (portable graymap)
-            filepath = filepath.replace('.png', '.pgm')
             with open(filepath, 'wb') as f:
-                f.write(f"P5\n64 64\n255\n".encode())
+                f.write(f"P5\n{width} {height}\n255\n".encode())
                 f.write(spec_data)
-            logging.info(f"[Spec] Saved PGM image (PIL not available): {filepath}")
+            logging.info(f"[Spec] Saved {width}x{height} PGM image (PIL not available): {filepath}")
+            return os.path.basename(filepath)
+        except Exception as e:
+            logging.error(f"[Spec] Error saving image: {e}")
+            # Try saving raw data as fallback
+            try:
+                raw_path = filepath.replace('.pgm', '.raw')
+                with open(raw_path, 'wb') as f:
+                    f.write(spec_data)
+                logging.info(f"[Spec] Saved raw data ({len(spec_data)} bytes): {raw_path}")
+                return os.path.basename(raw_path)
+            except:
+                return None
     
     def _cleanup_old_sessions(self):
         """Remove timed-out spectrogram sessions"""

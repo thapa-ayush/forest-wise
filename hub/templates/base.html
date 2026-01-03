@@ -4,37 +4,118 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Forest Guardian</title>
+    <title>{% block title %}Forest Guardian{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <script src="https://cdn.socket.io/4.6.1/socket.io.min.js"></script>
+    <link rel="icon"
+        href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🌲</text></svg>">
 </head>
 
 <body class="min-h-screen flex flex-col">
-    <nav class="navbar p-4 flex justify-between items-center">
-        <span class="text-xl font-bold text-teal-400">🌲 Forest Guardian</span>
-        <div class="flex gap-4">
-            <a href="{{ url_for('index') }}" class="hover:text-teal-300">Dashboard</a>
-            <a href="{{ url_for('map_view') }}" class="hover:text-teal-300">Map</a>
-            <a href="{{ url_for('alerts_view') }}" class="hover:text-teal-300">Alerts</a>
-            <a href="{{ url_for('nodes_view') }}" class="hover:text-teal-300">Nodes</a>
-            <a href="{{ url_for('reports_view') }}" class="hover:text-teal-300">Reports</a>
-            {% if current_user.is_authenticated and current_user.role == 'Admin' %}
-            <a href="{{ url_for('admin.users') }}" class="hover:text-teal-300">Admin</a>
-            {% endif %}
-            {% if current_user.is_authenticated %}
-            <a href="{{ url_for('auth.logout') }}" class="hover:text-red-400">Logout</a>
-            {% endif %}
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <a href="{{ url_for('index') }}" class="navbar-brand">
+                <svg viewBox="0 0 24 24" fill="currentColor">
+                    <path
+                        d="M12 2L4 8v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-8-6zm-1 15h-2v-2h2v2zm0-4h-2V9h2v4zm4 4h-2v-2h2v2zm0-4h-2V9h2v4z" />
+                    <path d="M12 2L4 8l8-6 8 6-8-6z" opacity="0.3" />
+                </svg>
+                Forest Guardian
+            </a>
+
+            <div class="nav-links">
+                <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                    </svg>
+                    Dashboard
+                </a>
+                <a href="{{ url_for('map_view') }}"
+                    class="nav-link {% if request.endpoint == 'map_view' %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    Map
+                </a>
+                <a href="{{ url_for('alerts_view') }}"
+                    class="nav-link {% if request.endpoint == 'alerts_view' %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
+                    Alerts
+                </a>
+                <a href="{{ url_for('nodes_view') }}"
+                    class="nav-link {% if request.endpoint == 'nodes_view' %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                    </svg>
+                    Nodes
+                </a>
+                <a href="{{ url_for('reports_view') }}"
+                    class="nav-link {% if request.endpoint == 'reports_view' %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Reports
+                </a>
+                {% if current_user.is_authenticated and current_user.role == 'Admin' %}
+                <a href="{{ url_for('admin.users') }}"
+                    class="nav-link {% if 'admin' in request.endpoint %}active{% endif %}">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    </svg>
+                    Admin
+                </a>
+                {% endif %}
+                {% if current_user.is_authenticated %}
+                <a href="{{ url_for('auth.logout') }}" class="nav-link" style="color: var(--danger);">
+                    <svg class="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                    </svg>
+                    Logout
+                </a>
+                {% endif %}
+            </div>
         </div>
     </nav>
-    <main class="flex-1 p-6">
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-7xl mx-auto w-full px-6 py-6">
         {% with messages = get_flashed_messages(with_categories=true) %}
         {% for cat, msg in messages %}
-        <div class="p-3 rounded mb-4 {{ 'bg-red-700' if cat == 'danger' else 'bg-teal-700' }}">{{ msg }}</div>
+        <div class="alert-banner {{ 'danger' if cat == 'danger' else 'success' }} animate-in">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {% if cat == 'danger' %}
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {% else %}
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                {% endif %}
+            </svg>
+            {{ msg }}
+        </div>
         {% endfor %}
         {% endwith %}
         {% block content %}{% endblock %}
     </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-[var(--border-color)] py-4 text-center text-[var(--text-muted)] text-sm">
+        Forest Guardian Hub • AI-Powered Illegal Logging Detection
+    </footer>
+
     <audio id="alert-audio" src="{{ url_for('static', filename='audio/alert.mp3') }}" preload="auto"></audio>
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
 </body>

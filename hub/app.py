@@ -395,8 +395,8 @@ def process_lora_messages():
                         
                         logging.info(f"🚨 Alert saved from {data.get('node_id')}")
                         
-                    elif data.get('type') == 'heartbeat':
-                        # Update node status
+                    elif data.get('type') in ('heartbeat', 'boot'):
+                        # Update node status (heartbeat or boot message)
                         db.execute('''
                             INSERT OR REPLACE INTO nodes 
                             (node_id, last_seen, battery, lat, lon, status, rssi)
@@ -404,7 +404,7 @@ def process_lora_messages():
                         ''', [
                             data.get('node_id'),
                             timestamp,
-                            data.get('battery'),
+                            data.get('battery', 100),
                             data.get('lat', 0),
                             data.get('lon', 0),
                             rssi
@@ -414,14 +414,15 @@ def process_lora_messages():
                         # Emit node update to web dashboard
                         socketio.emit('node_update', {
                             'node_id': data.get('node_id'),
-                            'battery': data.get('battery'),
+                            'battery': data.get('battery', 100),
                             'lat': data.get('lat'),
                             'lon': data.get('lon'),
                             'timestamp': timestamp,
                             'rssi': rssi
                         })
                         
-                        logging.info(f"💓 Heartbeat from {data.get('node_id')}")
+                        msg_type = '🚀 Boot' if data.get('type') == 'boot' else '💓 Heartbeat'
+                        logging.info(f"{msg_type} from {data.get('node_id')}")
                     
                     elif data.get('type') == 'spectrogram':
                         # Process spectrogram message (already reassembled by lora_receiver)
@@ -437,13 +438,23 @@ def process_lora_messages():
 def process_spectrogram_message(db, data, rssi, timestamp):
     """Process a reassembled spectrogram and optionally analyze with Azure AI"""
     node_id = data.get('node_id')
-    image_path = data.get('image_path')
+    # Handle both 'image_path' and 'spectrogram_file' field names
+    image_filename = data.get('image_path') or data.get('spectrogram_file')
     lat = data.get('lat', 0)
     lon = data.get('lon', 0)
-    anomaly_score = data.get('anomaly_score', 0)
+    anomaly_score = data.get('anomaly_score') or data.get('confidence', 0)
     session_id = data.get('session_id')
     
-    logging.info(f"📊 Processing spectrogram from {node_id} (session: {session_id})")
+    # Ensure we have an image path
+    if not image_filename:
+        logging.error(f"No image_path in spectrogram data: {data.keys()}")
+        return
+    
+    # Build full path for analysis (files are in static/spectrograms/)
+    spectrogram_dir = os.path.join(os.path.dirname(__file__), 'static', 'spectrograms')
+    image_path = os.path.join(spectrogram_dir, os.path.basename(image_filename))
+    
+    logging.info(f"📊 Processing spectrogram from {node_id} (session: {session_id}, file: {image_filename})")
     
     # Save spectrogram record to database
     cursor = db.execute('''
@@ -462,6 +473,25 @@ def process_spectrogram_message(db, data, rssi, timestamp):
     ])
     db.commit()
     spec_id = cursor.lastrowid
+    
+    # Node only sends spectrograms when it detects potential chainsaw
+    # Create an initial alert (will be confirmed/updated by AI)
+    db.execute('''
+        INSERT INTO alerts 
+        (node_id, confidence, lat, lon, timestamp, rssi, ai_analysis, spectrogram_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', [
+        node_id,
+        anomaly_score,
+        lat,
+        lon,
+        timestamp,
+        rssi,
+        "Pending AI verification",
+        spec_id
+    ])
+    db.commit()
+    logging.info(f"🚨 Alert created from spectrogram (pending AI verification)")
     
     # Emit to dashboard that new spectrogram received
     socketio.emit('new_spectrogram', {
@@ -572,4 +602,5 @@ start_lora_receiver()
 
 if __name__ == '__main__':
     # Debug=False to prevent reloader stealing GPIO from first process
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False)
+    # allow_unsafe_werkzeug=True for development (use gunicorn for production)
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

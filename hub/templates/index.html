@@ -1,95 +1,256 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">🌲 Forest Guardian Dashboard</h1>
-
-<!-- Stats Cards -->
-<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-    <div class="card p-6">
-        <h2 class="text-lg font-semibold mb-2">Active Nodes</h2>
-        <p class="text-4xl font-bold text-teal-400" id="node-count">-</p>
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-8">
+    <div>
+        <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+            <span class="text-4xl">🌲</span>
+            Forest Guardian
+        </h1>
+        <p class="text-gray-400 mt-1">Real-time forest monitoring & illegal logging detection</p>
     </div>
-    <div class="card p-6">
-        <h2 class="text-lg font-semibold mb-2">Recent Alerts</h2>
-        <p class="text-4xl font-bold text-red-400" id="alert-count">-</p>
-    </div>
-    <div class="card p-6">
-        <h2 class="text-lg font-semibold mb-2">Spectrograms (24h)</h2>
-        <p class="text-4xl font-bold text-purple-400" id="spec-count">-</p>
-    </div>
-    <div class="card p-6">
-        <h2 class="text-lg font-semibold mb-2">Chainsaw Detections</h2>
-        <p class="text-4xl font-bold text-orange-400" id="chainsaw-count">-</p>
+    <div class="flex items-center gap-3">
+        <span id="connection-status" class="status-badge online">
+            <span class="status-dot"></span>
+            Live
+        </span>
+        <span class="text-sm text-gray-500" id="last-update">Updated just now</span>
     </div>
 </div>
 
-<!-- AI Analysis Panel -->
-<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+<!-- Stats Grid -->
+<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+    <div class="stat-card nodes">
+        <div class="stat-icon">
+            <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+            </svg>
+        </div>
+        <div class="stat-label">Active Nodes</div>
+        <div class="stat-value" id="node-count">-</div>
+    </div>
+    
+    <div class="stat-card alerts">
+        <div class="stat-icon">
+            <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+        </div>
+        <div class="stat-label">Active Alerts</div>
+        <div class="stat-value" id="alert-count">-</div>
+    </div>
+    
+    <div class="stat-card spectrograms">
+        <div class="stat-icon">
+            <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+            </svg>
+        </div>
+        <div class="stat-label">Spectrograms (24h)</div>
+        <div class="stat-value" id="spec-count">-</div>
+    </div>
+    
+    <div class="stat-card detections">
+        <div class="stat-icon">
+            <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+            </svg>
+        </div>
+        <div class="stat-label">Chainsaw Detections</div>
+        <div class="stat-value" id="chainsaw-count">-</div>
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
     <!-- Recent Spectrograms -->
-    <div class="card p-6">
-        <h2 class="text-xl font-semibold mb-4">📊 Recent Spectrograms</h2>
-        <div id="spectrograms-list" class="space-y-3 max-h-96 overflow-y-auto">
-            <p class="text-gray-400">Loading...</p>
+    <div class="card lg:col-span-1">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+                </svg>
+                Recent Spectrograms
+            </h2>
+            <span class="text-xs text-gray-500">Last 10</span>
+        </div>
+        <div id="spectrograms-list" class="space-y-2 max-h-[400px] overflow-y-auto custom-scroll">
+            <div class="flex items-center justify-center py-8 text-gray-500">
+                <svg class="animate-spin h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                </svg>
+                Loading...
+            </div>
         </div>
     </div>
 
-    <!-- Latest AI Analysis -->
-    <div class="card p-6">
-        <h2 class="text-xl font-semibold mb-4">🤖 Azure AI Vision Analysis</h2>
-        <div id="latest-analysis" class="space-y-3">
-            <p class="text-gray-400">No recent analysis</p>
+    <!-- AI Analysis Panel -->
+    <div class="card lg:col-span-2">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                AI Analysis Results
+            </h2>
+            <span id="ai-provider-badge" class="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400">GPT-4o Vision</span>
         </div>
-        <div id="spectrogram-preview" class="mt-4 hidden">
-            <img id="spec-image" src="" alt="Spectrogram"
-                class="w-full max-w-xs mx-auto rounded border border-gray-600">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <!-- Spectrogram Image -->
+            <div id="spectrogram-preview" class="spectrogram-preview">
+                <div class="text-gray-500 py-8">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                    <p class="text-sm">Select a spectrogram to view</p>
+                </div>
+                <img id="spec-image" src="" alt="Spectrogram" class="hidden w-full rounded-lg border border-gray-700">
+            </div>
+
+            <!-- Analysis Details -->
+            <div id="latest-analysis">
+                <div class="text-center py-8 text-gray-500">
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                    <p class="text-sm">No analysis selected</p>
+                    <p class="text-xs mt-1 text-gray-600">Click a spectrogram to see AI analysis</p>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- System Status -->
-<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
-    <div class="card p-6">
-        <h2 class="text-xl font-semibold mb-4">📡 LoRa Status</h2>
-        <div id="lora-status" class="text-gray-300">
-            <p>Status: <span id="lora-running" class="text-green-400">Checking...</span></p>
-            <p>Packets Received: <span id="lora-packets">-</span></p>
-            <p>Spectrograms Received: <span id="lora-specs">-</span></p>
-            <p>Last SNR: <span id="lora-snr">-</span> dB</p>
+<!-- System Status Row -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- LoRa Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                </svg>
+                LoRa Radio Status
+            </h2>
+        </div>
+        <div class="space-y-3">
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 text-sm">Status</span>
+                <span id="lora-running" class="status-badge online">
+                    <span class="status-dot"></span>
+                    Checking...
+                </span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 text-sm">Packets Received</span>
+                <span id="lora-packets" class="font-mono text-white">-</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 text-sm">Spectrograms</span>
+                <span id="lora-specs" class="font-mono text-purple-400">-</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 text-sm">Last RSSI</span>
+                <span id="lora-rssi" class="font-mono text-cyan-400">- dBm</span>
+            </div>
+            <div class="flex justify-between items-center">
+                <span class="text-gray-400 text-sm">Last SNR</span>
+                <span id="lora-snr" class="font-mono text-cyan-400">- dB</span>
+            </div>
         </div>
     </div>
 
-    <!-- AI Mode Toggle -->
-    <div class="card p-6">
-        <h2 class="text-xl font-semibold mb-4">🤖 AI Analysis Mode</h2>
+    <!-- AI Mode Control -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                AI Analysis Mode
+            </h2>
+        </div>
         <div class="space-y-3">
-            <div class="flex items-center space-x-3 mb-4">
-                <span class="text-gray-400">Current:</span>
-                <span id="current-ai-mode" class="font-bold text-teal-400">Loading...</span>
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-gray-400 text-sm">Current Mode</span>
+                <span id="current-ai-mode" class="font-bold text-emerald-400">-</span>
             </div>
-            <select id="ai-mode-select"
-                class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-teal-400 focus:outline-none">
+            <select id="ai-mode-select" class="w-full">
                 <option value="gpt4o">🧠 GPT-4o Vision (Detailed)</option>
                 <option value="custom_vision">⚡ Custom Vision (Fast)</option>
                 <option value="auto">🔄 Auto (CV + GPT-4o verify)</option>
             </select>
-            <button id="apply-ai-mode" class="w-full btn-primary px-4 py-2 rounded mt-2">Apply Mode</button>
-            <p id="ai-mode-desc" class="text-xs text-gray-400 mt-2">Select AI service for spectrogram analysis</p>
+            <button id="apply-ai-mode" class="btn btn-primary w-full">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                </svg>
+                Apply Changes
+            </button>
+            <p id="ai-mode-desc" class="text-xs text-gray-500">Detailed analysis with visual reasoning</p>
         </div>
-        <div class="mt-4 text-xs text-gray-500">
-            <p>GPT-4o: <span id="gpt4o-status" class="text-gray-400">?</span></p>
-            <p>Custom Vision: <span id="cv-status" class="text-gray-400">?</span></p>
+    </div>
+
+    <!-- AI Service Status -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                </svg>
+                Service Status
+            </h2>
+        </div>
+        <div class="space-y-3">
+            <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">🧠</span>
+                    <span class="text-sm text-white">Azure GPT-4o</span>
+                </div>
+                <span id="gpt4o-status" class="status-badge pending">
+                    <span class="status-dot"></span>
+                    Checking
+                </span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">⚡</span>
+                    <span class="text-sm text-white">Custom Vision</span>
+                </div>
+                <span id="cv-status" class="status-badge pending">
+                    <span class="status-dot"></span>
+                    Checking
+                </span>
+            </div>
+            <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
+                <div class="flex items-center gap-2">
+                    <span class="text-lg">📡</span>
+                    <span class="text-sm text-white">LoRa Receiver</span>
+                </div>
+                <span id="lora-service-status" class="status-badge online">
+                    <span class="status-dot"></span>
+                    Active
+                </span>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+    // Global state
+    let selectedSpectrogramId = null;
+
     // Load initial stats
     function loadStats() {
         fetch('/api/nodes').then(r => r.json()).then(data => {
             document.getElementById('node-count').textContent = data.length;
-        });
+        }).catch(() => document.getElementById('node-count').textContent = '0');
+
         fetch('/api/alerts').then(r => r.json()).then(data => {
             document.getElementById('alert-count').textContent = data.length;
-        });
+        }).catch(() => document.getElementById('alert-count').textContent = '0');
+
         fetch('/api/spectrograms/stats').then(r => r.json()).then(data => {
             document.getElementById('spec-count').textContent = data.last_24h || 0;
             document.getElementById('chainsaw-count').textContent = data.chainsaw_24h || 0;
@@ -97,157 +258,193 @@
             document.getElementById('spec-count').textContent = '0';
             document.getElementById('chainsaw-count').textContent = '0';
         });
+
         fetch('/api/lora/status').then(r => r.json()).then(data => {
-            document.getElementById('lora-running').textContent = data.status === 'running' ? 'Online' : 'Offline';
-            document.getElementById('lora-running').className = data.status === 'running' ? 'text-green-400' : 'text-red-400';
+            const badge = document.getElementById('lora-running');
+            const serviceBadge = document.getElementById('lora-service-status');
+            if (data.status === 'running') {
+                badge.innerHTML = '<span class="status-dot"></span>Online';
+                badge.className = 'status-badge online';
+                serviceBadge.innerHTML = '<span class="status-dot"></span>Active';
+                serviceBadge.className = 'status-badge online';
+            } else {
+                badge.innerHTML = '<span class="status-dot"></span>Offline';
+                badge.className = 'status-badge offline';
+                serviceBadge.innerHTML = '<span class="status-dot"></span>Offline';
+                serviceBadge.className = 'status-badge offline';
+            }
             if (data.stats) {
                 document.getElementById('lora-packets').textContent = data.stats.packets_received || 0;
                 document.getElementById('lora-specs').textContent = data.stats.spectrograms_received || 0;
-                document.getElementById('lora-snr').textContent = data.stats.snr_last || '-';
+                document.getElementById('lora-rssi').textContent = (data.stats.rssi_last || '-') + ' dBm';
+                document.getElementById('lora-snr').textContent = (data.stats.snr_last || '-') + ' dB';
             }
-        }).catch(() => { });
+        }).catch(() => {});
+
+        document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
     }
 
     // Load recent spectrograms
     function loadSpectrograms() {
         fetch('/api/spectrograms').then(r => r.json()).then(data => {
             const list = document.getElementById('spectrograms-list');
-            if (data.length === 0) {
-                list.innerHTML = '<p class="text-gray-400">No spectrograms received yet</p>';
+            if (!data || data.length === 0) {
+                list.innerHTML = '<div class="text-center py-8 text-gray-500"><svg class="w-10 h-10 mx-auto mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg><p class="text-sm">No spectrograms yet</p><p class="text-xs mt-1">Waiting for node data...</p></div>';
                 return;
             }
-            list.innerHTML = data.slice(0, 10).map(s => `
-                <div class="p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600" onclick="showSpectrogram(${s.id})">
-                    <div class="flex justify-between items-center">
-                        <span class="font-mono text-sm">${s.node_id}</span>
-                        <span class="text-xs ${getThreatColor(s.threat_level)}">${s.threat_level || 'Pending'}</span>
-                    </div>
-                    <div class="text-sm text-gray-400 mt-1">
-                        ${s.classification || 'Analyzing...'} ${s.confidence ? `(${s.confidence}%)` : ''}
-                    </div>
-                    <div class="text-xs text-gray-500">${new Date(s.timestamp).toLocaleString()}</div>
-                </div>
-            `).join('');
+            list.innerHTML = data.slice(0, 10).map(s => '<div class="list-item ' + (selectedSpectrogramId === s.id ? 'ring-2 ring-emerald-500' : '') + '" onclick="showSpectrogram(' + s.id + ')"><div class="flex-1 min-w-0"><div class="flex items-center gap-2"><span class="list-item-title">' + s.node_id + '</span>' + getThreatBadge(s.threat_level) + '</div><div class="list-item-subtitle truncate">' + (s.classification || 'Analyzing...') + ' ' + (s.confidence ? '(' + s.confidence + '%)' : '') + '</div><div class="list-item-meta">' + formatTime(s.timestamp) + '</div></div><svg class="w-4 h-4 text-gray-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg></div>').join('');
         }).catch(() => {
-            document.getElementById('spectrograms-list').innerHTML = '<p class="text-gray-400">No spectrograms received yet</p>';
+            document.getElementById('spectrograms-list').innerHTML = '<div class="text-center py-8 text-gray-500"><p class="text-sm">No spectrograms yet</p></div>';
         });
     }
 
-    function getThreatColor(level) {
-        switch (level) {
-            case 'CRITICAL': return 'text-red-500 font-bold';
-            case 'HIGH': return 'text-orange-500';
-            case 'MEDIUM': return 'text-yellow-500';
-            case 'LOW': return 'text-green-400';
-            default: return 'text-gray-400';
-        }
+    function getThreatBadge(level) {
+        const badges = {
+            'CRITICAL': '<span class="status-badge" style="background:rgba(239,68,68,0.2);color:#ef4444">CRITICAL</span>',
+            'HIGH': '<span class="status-badge" style="background:rgba(249,115,22,0.2);color:#f97316">HIGH</span>',
+            'MEDIUM': '<span class="status-badge" style="background:rgba(245,158,11,0.2);color:#f59e0b">MEDIUM</span>',
+            'LOW': '<span class="status-badge" style="background:rgba(16,185,129,0.2);color:#10b981">LOW</span>'
+        };
+        return badges[level] || '<span class="status-badge pending"><span class="status-dot"></span>Pending</span>';
+    }
+
+    function formatTime(timestamp) {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diff = (now - date) / 1000;
+        if (diff < 60) return 'Just now';
+        if (diff < 3600) return Math.floor(diff / 60) + 'm ago';
+        if (diff < 86400) return Math.floor(diff / 3600) + 'h ago';
+        return date.toLocaleDateString();
     }
 
     function showSpectrogram(id) {
-        fetch(`/api/spectrograms/${id}`).then(r => r.json()).then(s => {
+        selectedSpectrogramId = id;
+        loadSpectrograms();
+
+        fetch('/api/spectrograms/' + id).then(r => r.json()).then(s => {
             const preview = document.getElementById('spectrogram-preview');
             const img = document.getElementById('spec-image');
             const analysis = document.getElementById('latest-analysis');
 
-            img.src = `/api/spectrograms/image/${s.image_path.split('/').pop()}`;
-            preview.classList.remove('hidden');
+            if (s.image_path) {
+                img.src = '/api/spectrograms/image/' + s.image_path.split('/').pop();
+                img.classList.remove('hidden');
+                const placeholder = preview.querySelector('div');
+                if (placeholder) placeholder.classList.add('hidden');
+            }
 
-            analysis.innerHTML = `
-                <div class="p-3 bg-gray-700 rounded">
-                    <div class="flex justify-between mb-2">
-                        <span class="font-bold">${s.classification || 'Unknown'}</span>
-                        <span class="${getThreatColor(s.threat_level)}">${s.threat_level || 'N/A'}</span>
-                    </div>
-                    <div class="text-2xl font-bold text-center mb-2">${s.confidence || 0}%</div>
-                    <p class="text-sm text-gray-300 mb-2">${s.ai_reasoning || 'Analysis pending...'}</p>
-                    <div class="text-xs text-gray-500">
-                        Node: ${s.node_id} | Location: ${s.lat?.toFixed(4)}, ${s.lon?.toFixed(4)}
-                    </div>
-                </div>
-            `;
-        });
+            const providerBadge = document.getElementById('ai-provider-badge');
+            if (s.ai_provider === 'gpt4o') {
+                providerBadge.textContent = '🧠 GPT-4o Vision';
+                providerBadge.className = 'text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400';
+            } else if (s.ai_provider === 'custom_vision') {
+                providerBadge.textContent = '⚡ Custom Vision';
+                providerBadge.className = 'text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400';
+            }
+
+            const isChainsaw = s.classification === 'chainsaw';
+            analysis.innerHTML = '<div class="space-y-4"><div class="text-center p-4 rounded-lg ' + (isChainsaw ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/30') + '"><div class="text-3xl mb-2">' + (isChainsaw ? '🚨' : '🌿') + '</div><div class="text-lg font-bold ' + (isChainsaw ? 'text-red-400' : 'text-emerald-400') + '">' + (s.classification || 'Unknown').toUpperCase() + '</div><div class="text-3xl font-bold text-white mt-1">' + (s.confidence || 0) + '%</div>' + getThreatBadge(s.threat_level) + '</div><div class="p-3 bg-gray-800/50 rounded-lg"><div class="text-xs text-gray-500 mb-1 font-medium">AI Analysis</div><p class="text-sm text-gray-300 leading-relaxed">' + (s.ai_reasoning || 'Analysis pending...') + '</p></div><div class="grid grid-cols-2 gap-2 text-xs"><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Node</div><div class="font-mono text-white">' + s.node_id + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Location</div><div class="font-mono text-white">' + (s.lat ? s.lat.toFixed(4) : '-') + ', ' + (s.lon ? s.lon.toFixed(4) : '-') + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">RSSI</div><div class="font-mono text-cyan-400">' + (s.rssi || '-') + ' dBm</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Time</div><div class="font-mono text-white">' + new Date(s.timestamp).toLocaleString() + '</div></div></div></div>';
+        }).catch(err => console.error('Error loading spectrogram:', err));
     }
 
-    // Initial load
-    loadStats();
-    loadSpectrograms();
-    loadAiMode();
-
-    // Refresh every 10 seconds
-    setInterval(loadStats, 10000);
-    setInterval(loadSpectrograms, 15000);
-
-    // AI Mode functions
     function loadAiMode() {
         fetch('/api/ai/mode').then(r => r.json()).then(data => {
             document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
             document.getElementById('ai-mode-select').value = data.mode;
             updateAiModeDesc(data.mode);
-        }).catch(() => { });
+        }).catch(() => {});
 
         fetch('/api/ai/status').then(r => r.json()).then(data => {
-            document.getElementById('gpt4o-status').textContent = data.services.gpt4o.configured ? '✅ Configured' : '❌ Not configured';
-            document.getElementById('gpt4o-status').className = data.services.gpt4o.configured ? 'text-green-400' : 'text-red-400';
-            document.getElementById('cv-status').textContent = data.services.custom_vision.configured ? '✅ Configured' : '❌ Not configured';
-            document.getElementById('cv-status').className = data.services.custom_vision.configured ? 'text-green-400' : 'text-red-400';
-        }).catch(() => { });
+            const gpt4oStatus = document.getElementById('gpt4o-status');
+            const cvStatus = document.getElementById('cv-status');
+            if (data.services.gpt4o.configured) {
+                gpt4oStatus.innerHTML = '<span class="status-dot"></span>Ready';
+                gpt4oStatus.className = 'status-badge online';
+            } else {
+                gpt4oStatus.innerHTML = '<span class="status-dot"></span>Not Configured';
+                gpt4oStatus.className = 'status-badge offline';
+            }
+            if (data.services.custom_vision.configured) {
+                cvStatus.innerHTML = '<span class="status-dot"></span>Ready';
+                cvStatus.className = 'status-badge online';
+            } else {
+                cvStatus.innerHTML = '<span class="status-dot"></span>Not Configured';
+                cvStatus.className = 'status-badge offline';
+            }
+        }).catch(() => {});
     }
 
     function updateAiModeDesc(mode) {
         const desc = {
-            'gpt4o': 'Detailed analysis with visual reasoning, features detected, and recommendations',
-            'custom_vision': 'Fast classification with your trained model (best for high volume)',
-            'auto': 'Uses Custom Vision first, verifies threats with GPT-4o for accuracy'
+            'gpt4o': 'Detailed analysis with visual reasoning and recommendations',
+            'custom_vision': 'Fast classification with your trained model',
+            'auto': 'Uses Custom Vision first, verifies threats with GPT-4o'
         };
-        document.getElementById('ai-mode-desc').textContent = desc[mode] || 'Select AI service for spectrogram analysis';
+        document.getElementById('ai-mode-desc').textContent = desc[mode] || 'Select AI service';
     }
 
-    document.getElementById('ai-mode-select').addEventListener('change', function () {
+    document.getElementById('ai-mode-select').addEventListener('change', function() {
         updateAiModeDesc(this.value);
     });
 
-    document.getElementById('apply-ai-mode').addEventListener('click', function () {
+    document.getElementById('apply-ai-mode').addEventListener('click', function() {
+        const btn = this;
         const mode = document.getElementById('ai-mode-select').value;
+        btn.disabled = true;
+        btn.innerHTML = '<svg class="animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path></svg> Applying...';
+
         fetch('/api/ai/mode', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ mode: mode })
         }).then(r => r.json()).then(data => {
+            btn.disabled = false;
             if (data.success) {
+                btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Applied!';
                 document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
-                document.getElementById('current-ai-mode').classList.add('animate-pulse');
-                setTimeout(() => document.getElementById('current-ai-mode').classList.remove('animate-pulse'), 2000);
+                setTimeout(() => {
+                    btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Apply Changes';
+                }, 2000);
             } else {
-                alert('Failed to change AI mode: ' + (data.error || 'Unknown error'));
+                btn.innerHTML = '❌ Error';
+                alert('Failed: ' + (data.error || 'Unknown error'));
             }
-        }).catch(err => alert('Error: ' + err));
+        }).catch(err => {
+            btn.disabled = false;
+            btn.innerHTML = '❌ Error';
+            alert('Error: ' + err);
+        });
     });
 
-    // Socket.IO real-time updates
+    loadStats();
+    loadSpectrograms();
+    loadAiMode();
+    setInterval(loadStats, 10000);
+    setInterval(loadSpectrograms, 15000);
+
     const socket = io();
-
-    socket.on('new_spectrogram', (data) => {
-        loadSpectrograms();
-        loadStats();
+    socket.on('connect', () => {
+        const badge = document.getElementById('connection-status');
+        badge.innerHTML = '<span class="status-dot"></span>Live';
+        badge.className = 'status-badge online';
     });
-
+    socket.on('disconnect', () => {
+        const badge = document.getElementById('connection-status');
+        badge.innerHTML = '<span class="status-dot"></span>Offline';
+        badge.className = 'status-badge offline';
+    });
+    socket.on('new_spectrogram', (data) => { loadSpectrograms(); loadStats(); });
     socket.on('spectrogram_analyzed', (data) => {
         loadSpectrograms();
         loadStats();
-        // Show notification if chainsaw detected
+        if (selectedSpectrogramId === data.spectrogram_id) showSpectrogram(data.spectrogram_id);
         if (data.classification === 'chainsaw' && data.confidence >= 70) {
-            alert(`🚨 CHAINSAW DETECTED!\n\nNode: ${data.node_id}\nConfidence: ${data.confidence}%\n\n${data.reasoning}`);
+            alert('🚨 CHAINSAW DETECTED!\n\nNode: ' + data.node_id + '\nConfidence: ' + data.confidence + '%');
         }
     });
-
-    socket.on('new_alert', (data) => {
-        loadStats();
-    });
-
-    socket.on('node_update', (data) => {
-        loadStats();
-    });
-
+    socket.on('new_alert', (data) => loadStats());
+    socket.on('node_update', (data) => loadStats());
     socket.on('ai_mode_changed', (data) => {
         document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
         document.getElementById('ai-mode-select').value = data.mode;
