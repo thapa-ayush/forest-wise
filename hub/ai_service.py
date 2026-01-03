@@ -162,6 +162,15 @@ NATURAL FOREST SOUNDS (NO THREAT):
 - Thunder: sudden broadband impulse
 - Animal calls: isolated patterns, not sustained
 
+CONFIDENCE SCORING (be precise and varied):
+- 95-100%: Perfect textbook example, extremely clear features
+- 85-94%: Very clear features, high certainty
+- 70-84%: Probable match, some features present but not all
+- 50-69%: Possible match, features are ambiguous
+- Below 50%: Unlikely match, use a different classification
+
+Be critical and use the FULL confidence range. Not every chainsaw spectrogram is 95%.
+
 RESPOND IN THIS EXACT JSON FORMAT:
 {
     "classification": "chainsaw" | "vehicle" | "natural" | "unknown",
