@@ -33,8 +33,38 @@ CREATE TABLE IF NOT EXISTS alerts (
     responded INTEGER DEFAULT 0,
     responded_by INTEGER,
     responded_at TIMESTAMP,
-    rssi INTEGER DEFAULT 0
+    rssi INTEGER DEFAULT 0,
+    spectrogram_id INTEGER,
+    FOREIGN KEY (spectrogram_id) REFERENCES spectrograms(id)
 );
+
+-- Spectrograms table for Azure AI Vision analysis
+CREATE TABLE IF NOT EXISTS spectrograms (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    node_id TEXT NOT NULL,
+    image_path TEXT NOT NULL,
+    lat REAL DEFAULT 0,
+    lon REAL DEFAULT 0,
+    anomaly_score REAL DEFAULT 0,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    rssi INTEGER DEFAULT 0,
+    session_id TEXT,
+    -- AI Analysis Results
+    classification TEXT,        -- 'chainsaw', 'vehicle', 'natural', 'unknown'
+    confidence INTEGER,         -- 0-100
+    threat_level TEXT,          -- 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE'
+    ai_reasoning TEXT,          -- AI explanation
+    features_detected TEXT,     -- JSON array of detected features
+    service_used TEXT,          -- 'gpt4o', 'custom_vision', 'custom_vision+gpt4o'
+    analyzed_at TIMESTAMP,
+    -- Indexes
+    FOREIGN KEY (node_id) REFERENCES nodes(node_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_spectrograms_node ON spectrograms(node_id);
+CREATE INDEX IF NOT EXISTS idx_spectrograms_timestamp ON spectrograms(timestamp);
+CREATE INDEX IF NOT EXISTS idx_spectrograms_classification ON spectrograms(classification);
+CREATE INDEX IF NOT EXISTS idx_spectrograms_threat ON spectrograms(threat_level);
 
 CREATE TABLE IF NOT EXISTS login_attempts (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

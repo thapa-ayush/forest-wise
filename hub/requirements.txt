@@ -17,3 +17,6 @@ azure-cosmos==4.6.0
 geopy==2.4.1
 spidev==3.6
 RPi.GPIO==0.7.1
+Pillow==10.2.0
+numpy==1.26.4
+lgpio==0.2.2.0

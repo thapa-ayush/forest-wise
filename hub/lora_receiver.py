@@ -2,7 +2,11 @@
 """
 Forest Guardian Hub - LoRa Receiver
 ===================================
-Receives alerts from Guardian nodes via LoRa and saves to database.
+Receives alerts and spectrograms from Guardian nodes via LoRa.
+
+Supports:
+- JSON messages (alerts, heartbeats, boot)
+- Multi-packet spectrogram transmissions for Azure AI analysis
 
 This runs as a background thread alongside the Flask web app.
 
@@ -13,8 +17,11 @@ import json
 import time
 import threading
 import logging
+import os
+import base64
 from datetime import datetime
 from queue import Queue
+from collections import defaultdict
 
 # Flag to enable/disable actual hardware (for development)
 HARDWARE_ENABLED = False
@@ -67,17 +74,32 @@ MODE_TX = 0x03
 MODE_RX_CONTINUOUS = 0x05
 MODE_LORA = 0x80
 
+# Multi-packet protocol constants (MUST MATCH NODE!)
+PKT_TYPE_JSON = 0x01
+PKT_TYPE_SPEC_START = 0x10
+PKT_TYPE_SPEC_DATA = 0x11
+PKT_TYPE_SPEC_END = 0x12
+
 # Message queue for received packets
 message_queue = Queue()
+
+# Spectrogram assembly storage
+# Key: (node_hash, session_id) -> {'start_time': ..., 'data': bytearray, 'metadata': ..., 'packets': set()}
+spectrogram_sessions = {}
+SPECTROGRAM_TIMEOUT = 30  # seconds
 
 # Statistics
 stats = {
     'packets_received': 0,
     'alerts_received': 0,
     'heartbeats_received': 0,
+    'spectrograms_received': 0,
     'last_packet_time': None,
     'connected_nodes': set(),
     'rssi_last': 0,
+    'snr_last': 0,
+    'crc_errors': 0,
+    'start_time': datetime.now(),
 }
 
 
@@ -271,20 +293,24 @@ class LoRaReceiver:
     def _process_packet(self, packet, rssi):
         """Process received LoRa packet"""
         try:
-            # Decode JSON
+            timestamp = datetime.now()
+            stats['packets_received'] += 1
+            stats['last_packet_time'] = timestamp
+            stats['rssi_last'] = rssi
+            
+            # Check if it's a multi-packet spectrogram (starts with 'FG' magic)
+            if len(packet) >= 8 and packet[0] == 0x46 and packet[1] == 0x47:
+                self._process_spectrogram_packet(packet, rssi, timestamp)
+                return
+            
+            # Otherwise, try to parse as JSON
             data = packet.decode('utf-8')
             message = json.loads(data)
-            
-            timestamp = datetime.now()
             
             logging.info(f"[LoRa RX] RSSI: {rssi} dBm")
             logging.info(f"  Node: {message.get('node_id', 'Unknown')}")
             logging.info(f"  Type: {message.get('type', 'Unknown')}")
             
-            # Update statistics
-            stats['packets_received'] += 1
-            stats['last_packet_time'] = timestamp
-            stats['rssi_last'] = rssi
             stats['connected_nodes'].add(message.get('node_id', 'Unknown'))
             
             if message.get('type') == 'alert':
@@ -304,6 +330,222 @@ class LoRaReceiver:
             logging.warning(f"Non-JSON packet received: {packet[:50]}...")
         except Exception as e:
             logging.error(f"Error processing packet: {e}")
+    
+    def _process_spectrogram_packet(self, packet, rssi, timestamp):
+        """Process multi-packet spectrogram transmission"""
+        try:
+            # Parse header
+            node_hash = (packet[2] << 8) | packet[3]
+            pkt_type = packet[4]
+            session_id = (packet[5] << 8) | packet[6]
+            
+            session_key = (node_hash, session_id)
+            
+            if pkt_type == PKT_TYPE_SPEC_START:
+                # Start of new spectrogram
+                expected_packets = packet[7]
+                total_size = (packet[8] << 8) | packet[9]
+                
+                # Extract node_id (null-terminated string starting at byte 10)
+                node_id_bytes = packet[10:]
+                null_idx = node_id_bytes.find(0)
+                if null_idx > 0:
+                    node_id = node_id_bytes[:null_idx].decode('utf-8')
+                else:
+                    node_id = node_id_bytes.decode('utf-8', errors='ignore').strip('\x00')
+                
+                spectrogram_sessions[session_key] = {
+                    'start_time': timestamp,
+                    'node_id': node_id,
+                    'expected_packets': expected_packets,
+                    'total_size': total_size,
+                    'data': bytearray(),
+                    'packets_received': set(),
+                    'metadata': None,
+                    'rssi': rssi
+                }
+                
+                logging.info(f"[Spec] START session {session_id} from {node_id}: expecting {expected_packets} packets, {total_size} bytes")
+                stats['connected_nodes'].add(node_id)
+                
+            elif pkt_type == PKT_TYPE_SPEC_DATA:
+                # Data chunk
+                seq = packet[7]
+                data = packet[8:]
+                
+                if session_key in spectrogram_sessions:
+                    session = spectrogram_sessions[session_key]
+                    if seq not in session['packets_received']:
+                        session['data'].extend(data)
+                        session['packets_received'].add(seq)
+                        logging.info(f"[Spec] DATA packet {seq + 1}/{session['expected_packets']} received ({len(data)} bytes)")
+                else:
+                    logging.warning(f"[Spec] DATA packet for unknown session {session_id}")
+                
+            elif pkt_type == PKT_TYPE_SPEC_END:
+                # End of transmission with metadata
+                packets_sent = packet[7]
+                metadata_json = packet[8:].decode('utf-8', errors='ignore').strip('\x00')
+                
+                if session_key in spectrogram_sessions:
+                    session = spectrogram_sessions[session_key]
+                    
+                    try:
+                        session['metadata'] = json.loads(metadata_json)
+                    except:
+                        session['metadata'] = {'conf': 0, 'lat': 0, 'lon': 0, 'bat': 100}
+                    
+                    # Complete - assemble and queue
+                    received = len(session['packets_received'])
+                    expected = session['expected_packets']
+                    
+                    logging.info(f"[Spec] END session {session_id}: {received}/{expected} packets received")
+                    
+                    if received >= expected * 0.8:  # Allow 20% packet loss
+                        self._complete_spectrogram(session_key, rssi, timestamp)
+                    else:
+                        logging.warning(f"[Spec] Too many packets lost ({expected - received}), discarding")
+                    
+                    # Clean up session
+                    del spectrogram_sessions[session_key]
+                    stats['spectrograms_received'] += 1
+                else:
+                    logging.warning(f"[Spec] END packet for unknown session {session_id}")
+            
+            # Clean up old sessions
+            self._cleanup_old_sessions()
+            
+        except Exception as e:
+            logging.error(f"Error processing spectrogram packet: {e}")
+            import traceback
+            traceback.print_exc()
+    
+    def _complete_spectrogram(self, session_key, rssi, timestamp):
+        """Complete spectrogram assembly and queue for Azure AI analysis"""
+        session = spectrogram_sessions[session_key]
+        
+        # Decompress spectrogram data
+        spec_data = self._decompress_spectrogram(bytes(session['data']))
+        
+        if spec_data is None:
+            logging.warning("[Spec] Failed to decompress spectrogram")
+            return
+        
+        # Save spectrogram to file
+        spec_dir = os.path.join(os.path.dirname(__file__), 'static', 'spectrograms')
+        os.makedirs(spec_dir, exist_ok=True)
+        
+        filename = f"{session['node_id']}_{timestamp.strftime('%Y%m%d_%H%M%S')}.png"
+        filepath = os.path.join(spec_dir, filename)
+        
+        # Save as PNG using simple PGM format (can upgrade to PNG with PIL)
+        self._save_spectrogram_image(spec_data, filepath)
+        
+        # Queue for Azure AI analysis
+        metadata = session['metadata'] or {}
+        message = {
+            'node_id': session['node_id'],
+            'type': 'spectrogram',
+            'spectrogram_file': filename,
+            'spectrogram_data': base64.b64encode(spec_data).decode('ascii'),
+            'confidence': metadata.get('conf', 0),
+            'lat': metadata.get('lat', 0),
+            'lon': metadata.get('lon', 0),
+            'battery': metadata.get('bat', 100),
+            'timestamp': timestamp.isoformat(),
+        }
+        
+        message_queue.put({
+            'data': message,
+            'rssi': rssi,
+            'timestamp': timestamp.isoformat()
+        })
+        
+        logging.info(f"[Spec] Complete spectrogram from {session['node_id']} saved to {filename}")
+        stats['alerts_received'] += 1
+    
+    def _decompress_spectrogram(self, compressed):
+        """Decompress spectrogram data (RLE + 4-bit quantization)"""
+        try:
+            # Check header
+            if len(compressed) < 4 or compressed[0] != 0x53 or compressed[1] != 0x50:
+                logging.warning("[Spec] Invalid spectrogram header")
+                return None
+            
+            width = compressed[2]
+            height = compressed[3]
+            
+            # Decode RLE
+            quantized = bytearray()
+            idx = 4
+            while idx < len(compressed):
+                byte = compressed[idx]
+                idx += 1
+                
+                if byte & 0x80:  # Raw byte
+                    quantized.append(byte & 0x7F)
+                else:  # RLE run
+                    if idx < len(compressed):
+                        run_len = byte
+                        value = compressed[idx]
+                        idx += 1
+                        quantized.extend([value] * run_len)
+            
+            # Unpack 4-bit quantized data to 8-bit
+            spec_data = bytearray()
+            for byte in quantized:
+                high = ((byte >> 4) & 0x0F) * 17  # Scale 0-15 to 0-255
+                low = (byte & 0x0F) * 17
+                spec_data.append(high)
+                spec_data.append(low)
+            
+            # Ensure correct size (64x64 = 4096)
+            expected_size = width * height
+            if len(spec_data) < expected_size:
+                spec_data.extend([0] * (expected_size - len(spec_data)))
+            elif len(spec_data) > expected_size:
+                spec_data = spec_data[:expected_size]
+            
+            return bytes(spec_data)
+            
+        except Exception as e:
+            logging.error(f"Spectrogram decompression error: {e}")
+            return None
+    
+    def _save_spectrogram_image(self, spec_data, filepath):
+        """Save spectrogram as image file"""
+        try:
+            # Try to use PIL if available for PNG
+            from PIL import Image
+            import numpy as np
+            
+            width = height = 64
+            img_array = np.frombuffer(spec_data, dtype=np.uint8).reshape((height, width))
+            img = Image.fromarray(img_array, mode='L')
+            img.save(filepath)
+            logging.info(f"[Spec] Saved PNG image: {filepath}")
+            
+        except ImportError:
+            # Fallback to PGM format (portable graymap)
+            filepath = filepath.replace('.png', '.pgm')
+            with open(filepath, 'wb') as f:
+                f.write(f"P5\n64 64\n255\n".encode())
+                f.write(spec_data)
+            logging.info(f"[Spec] Saved PGM image (PIL not available): {filepath}")
+    
+    def _cleanup_old_sessions(self):
+        """Remove timed-out spectrogram sessions"""
+        now = datetime.now()
+        expired = []
+        
+        for key, session in spectrogram_sessions.items():
+            age = (now - session['start_time']).total_seconds()
+            if age > SPECTROGRAM_TIMEOUT:
+                expired.append(key)
+                logging.warning(f"[Spec] Session {key} timed out after {age:.1f}s")
+        
+        for key in expired:
+            del spectrogram_sessions[key]
     
     def _generate_test_packet(self):
         """Generate test packet for simulation mode"""
@@ -349,14 +591,20 @@ class LoRaReceiver:
     
     def get_stats(self):
         """Get receiver statistics"""
+        uptime = (datetime.now() - stats['start_time']).total_seconds()
         return {
             'packets_received': stats['packets_received'],
             'alerts_received': stats['alerts_received'],
             'heartbeats_received': stats['heartbeats_received'],
+            'spectrograms_received': stats['spectrograms_received'],
             'last_packet_time': stats['last_packet_time'].isoformat() if stats['last_packet_time'] else None,
             'connected_nodes': list(stats['connected_nodes']),
             'rssi_last': stats['rssi_last'],
+            'snr_last': stats.get('snr_last', 0),
+            'crc_errors': stats.get('crc_errors', 0),
+            'uptime': int(uptime),
             'hardware_enabled': HARDWARE_ENABLED,
+            'pending_spectrograms': len(spectrogram_sessions),
         }
 
 

@@ -1,7 +1,9 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Dashboard</h1>
-<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<h1 class="text-2xl font-bold mb-4">🌲 Forest Guardian Dashboard</h1>
+
+<!-- Stats Cards -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-6">
     <div class="card p-6">
         <h2 class="text-lg font-semibold mb-2">Active Nodes</h2>
         <p class="text-4xl font-bold text-teal-400" id="node-count">-</p>
@@ -11,17 +13,251 @@
         <p class="text-4xl font-bold text-red-400" id="alert-count">-</p>
     </div>
     <div class="card p-6">
-        <h2 class="text-lg font-semibold mb-2">System Status</h2>
-        <p class="text-xl font-bold text-green-400">Online</p>
+        <h2 class="text-lg font-semibold mb-2">Spectrograms (24h)</h2>
+        <p class="text-4xl font-bold text-purple-400" id="spec-count">-</p>
+    </div>
+    <div class="card p-6">
+        <h2 class="text-lg font-semibold mb-2">Chainsaw Detections</h2>
+        <p class="text-4xl font-bold text-orange-400" id="chainsaw-count">-</p>
     </div>
 </div>
-<div class="mt-8">
-    <h2 class="text-xl font-semibold mb-4">Simulation</h2>
-    <button id="simulate-alert" class="btn-danger px-4 py-2 rounded mr-2">Simulate Alert</button>
-    <button id="simulate-heartbeat" class="btn-primary px-4 py-2 rounded">Simulate Heartbeat</button>
+
+<!-- AI Analysis Panel -->
+<div class="mt-8 grid grid-cols-1 lg:grid-cols-2 gap-6">
+    <!-- Recent Spectrograms -->
+    <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">📊 Recent Spectrograms</h2>
+        <div id="spectrograms-list" class="space-y-3 max-h-96 overflow-y-auto">
+            <p class="text-gray-400">Loading...</p>
+        </div>
+    </div>
+
+    <!-- Latest AI Analysis -->
+    <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">🤖 Azure AI Vision Analysis</h2>
+        <div id="latest-analysis" class="space-y-3">
+            <p class="text-gray-400">No recent analysis</p>
+        </div>
+        <div id="spectrogram-preview" class="mt-4 hidden">
+            <img id="spec-image" src="" alt="Spectrogram"
+                class="w-full max-w-xs mx-auto rounded border border-gray-600">
+        </div>
+    </div>
 </div>
+
+<!-- System Status -->
+<div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-6">
+    <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">📡 LoRa Status</h2>
+        <div id="lora-status" class="text-gray-300">
+            <p>Status: <span id="lora-running" class="text-green-400">Checking...</span></p>
+            <p>Packets Received: <span id="lora-packets">-</span></p>
+            <p>Spectrograms Received: <span id="lora-specs">-</span></p>
+            <p>Last SNR: <span id="lora-snr">-</span> dB</p>
+        </div>
+    </div>
+
+    <!-- AI Mode Toggle -->
+    <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">🤖 AI Analysis Mode</h2>
+        <div class="space-y-3">
+            <div class="flex items-center space-x-3 mb-4">
+                <span class="text-gray-400">Current:</span>
+                <span id="current-ai-mode" class="font-bold text-teal-400">Loading...</span>
+            </div>
+            <select id="ai-mode-select"
+                class="w-full bg-gray-700 text-white rounded px-3 py-2 border border-gray-600 focus:border-teal-400 focus:outline-none">
+                <option value="gpt4o">🧠 GPT-4o Vision (Detailed)</option>
+                <option value="custom_vision">⚡ Custom Vision (Fast)</option>
+                <option value="auto">🔄 Auto (CV + GPT-4o verify)</option>
+            </select>
+            <button id="apply-ai-mode" class="w-full btn-primary px-4 py-2 rounded mt-2">Apply Mode</button>
+            <p id="ai-mode-desc" class="text-xs text-gray-400 mt-2">Select AI service for spectrogram analysis</p>
+        </div>
+        <div class="mt-4 text-xs text-gray-500">
+            <p>GPT-4o: <span id="gpt4o-status" class="text-gray-400">?</span></p>
+            <p>Custom Vision: <span id="cv-status" class="text-gray-400">?</span></p>
+        </div>
+    </div>
+
+    <div class="card p-6">
+        <h2 class="text-xl font-semibold mb-4">🧪 Simulation</h2>
+        <button id="simulate-alert" class="btn-danger px-4 py-2 rounded mr-2 mb-2">Simulate Alert</button>
+        <button id="simulate-heartbeat" class="btn-primary px-4 py-2 rounded mb-2">Simulate Heartbeat</button>
+    </div>
+</div>
+
 <script>
-    fetch('/api/nodes').then(r => r.json()).then(data => { document.getElementById('node-count').textContent = data.length; });
-    fetch('/api/alerts').then(r => r.json()).then(data => { document.getElementById('alert-count').textContent = data.length; });
+    // Load initial stats
+    function loadStats() {
+        fetch('/api/nodes').then(r => r.json()).then(data => {
+            document.getElementById('node-count').textContent = data.length;
+        });
+        fetch('/api/alerts').then(r => r.json()).then(data => {
+            document.getElementById('alert-count').textContent = data.length;
+        });
+        fetch('/api/spectrograms/stats').then(r => r.json()).then(data => {
+            document.getElementById('spec-count').textContent = data.last_24h || 0;
+            document.getElementById('chainsaw-count').textContent = data.chainsaw_24h || 0;
+        }).catch(() => {
+            document.getElementById('spec-count').textContent = '0';
+            document.getElementById('chainsaw-count').textContent = '0';
+        });
+        fetch('/api/lora/status').then(r => r.json()).then(data => {
+            document.getElementById('lora-running').textContent = data.status === 'running' ? 'Online' : 'Offline';
+            document.getElementById('lora-running').className = data.status === 'running' ? 'text-green-400' : 'text-red-400';
+            if (data.stats) {
+                document.getElementById('lora-packets').textContent = data.stats.packets_received || 0;
+                document.getElementById('lora-specs').textContent = data.stats.spectrograms_received || 0;
+                document.getElementById('lora-snr').textContent = data.stats.snr_last || '-';
+            }
+        }).catch(() => { });
+    }
+
+    // Load recent spectrograms
+    function loadSpectrograms() {
+        fetch('/api/spectrograms').then(r => r.json()).then(data => {
+            const list = document.getElementById('spectrograms-list');
+            if (data.length === 0) {
+                list.innerHTML = '<p class="text-gray-400">No spectrograms received yet</p>';
+                return;
+            }
+            list.innerHTML = data.slice(0, 10).map(s => `
+                <div class="p-3 bg-gray-700 rounded cursor-pointer hover:bg-gray-600" onclick="showSpectrogram(${s.id})">
+                    <div class="flex justify-between items-center">
+                        <span class="font-mono text-sm">${s.node_id}</span>
+                        <span class="text-xs ${getThreatColor(s.threat_level)}">${s.threat_level || 'Pending'}</span>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-1">
+                        ${s.classification || 'Analyzing...'} ${s.confidence ? `(${s.confidence}%)` : ''}
+                    </div>
+                    <div class="text-xs text-gray-500">${new Date(s.timestamp).toLocaleString()}</div>
+                </div>
+            `).join('');
+        }).catch(() => {
+            document.getElementById('spectrograms-list').innerHTML = '<p class="text-gray-400">No spectrograms received yet</p>';
+        });
+    }
+
+    function getThreatColor(level) {
+        switch (level) {
+            case 'CRITICAL': return 'text-red-500 font-bold';
+            case 'HIGH': return 'text-orange-500';
+            case 'MEDIUM': return 'text-yellow-500';
+            case 'LOW': return 'text-green-400';
+            default: return 'text-gray-400';
+        }
+    }
+
+    function showSpectrogram(id) {
+        fetch(`/api/spectrograms/${id}`).then(r => r.json()).then(s => {
+            const preview = document.getElementById('spectrogram-preview');
+            const img = document.getElementById('spec-image');
+            const analysis = document.getElementById('latest-analysis');
+
+            img.src = `/api/spectrograms/image/${s.image_path.split('/').pop()}`;
+            preview.classList.remove('hidden');
+
+            analysis.innerHTML = `
+                <div class="p-3 bg-gray-700 rounded">
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold">${s.classification || 'Unknown'}</span>
+                        <span class="${getThreatColor(s.threat_level)}">${s.threat_level || 'N/A'}</span>
+                    </div>
+                    <div class="text-2xl font-bold text-center mb-2">${s.confidence || 0}%</div>
+                    <p class="text-sm text-gray-300 mb-2">${s.ai_reasoning || 'Analysis pending...'}</p>
+                    <div class="text-xs text-gray-500">
+                        Node: ${s.node_id} | Location: ${s.lat?.toFixed(4)}, ${s.lon?.toFixed(4)}
+                    </div>
+                </div>
+            `;
+        });
+    }
+
+    // Initial load
+    loadStats();
+    loadSpectrograms();
+    loadAiMode();
+
+    // Refresh every 10 seconds
+    setInterval(loadStats, 10000);
+    setInterval(loadSpectrograms, 15000);
+
+    // AI Mode functions
+    function loadAiMode() {
+        fetch('/api/ai/mode').then(r => r.json()).then(data => {
+            document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+            document.getElementById('ai-mode-select').value = data.mode;
+            updateAiModeDesc(data.mode);
+        }).catch(() => { });
+
+        fetch('/api/ai/status').then(r => r.json()).then(data => {
+            document.getElementById('gpt4o-status').textContent = data.services.gpt4o.configured ? '✅ Configured' : '❌ Not configured';
+            document.getElementById('gpt4o-status').className = data.services.gpt4o.configured ? 'text-green-400' : 'text-red-400';
+            document.getElementById('cv-status').textContent = data.services.custom_vision.configured ? '✅ Configured' : '❌ Not configured';
+            document.getElementById('cv-status').className = data.services.custom_vision.configured ? 'text-green-400' : 'text-red-400';
+        }).catch(() => { });
+    }
+
+    function updateAiModeDesc(mode) {
+        const desc = {
+            'gpt4o': 'Detailed analysis with visual reasoning, features detected, and recommendations',
+            'custom_vision': 'Fast classification with your trained model (best for high volume)',
+            'auto': 'Uses Custom Vision first, verifies threats with GPT-4o for accuracy'
+        };
+        document.getElementById('ai-mode-desc').textContent = desc[mode] || 'Select AI service for spectrogram analysis';
+    }
+
+    document.getElementById('ai-mode-select').addEventListener('change', function () {
+        updateAiModeDesc(this.value);
+    });
+
+    document.getElementById('apply-ai-mode').addEventListener('click', function () {
+        const mode = document.getElementById('ai-mode-select').value;
+        fetch('/api/ai/mode', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mode: mode })
+        }).then(r => r.json()).then(data => {
+            if (data.success) {
+                document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+                document.getElementById('current-ai-mode').classList.add('animate-pulse');
+                setTimeout(() => document.getElementById('current-ai-mode').classList.remove('animate-pulse'), 2000);
+            } else {
+                alert('Failed to change AI mode: ' + (data.error || 'Unknown error'));
+            }
+        }).catch(err => alert('Error: ' + err));
+    });
+
+    // Socket.IO real-time updates
+    const socket = io();
+
+    socket.on('new_spectrogram', (data) => {
+        loadSpectrograms();
+        loadStats();
+    });
+
+    socket.on('spectrogram_analyzed', (data) => {
+        loadSpectrograms();
+        loadStats();
+        // Show notification if chainsaw detected
+        if (data.classification === 'chainsaw' && data.confidence >= 70) {
+            alert(`🚨 CHAINSAW DETECTED!\n\nNode: ${data.node_id}\nConfidence: ${data.confidence}%\n\n${data.reasoning}`);
+        }
+    });
+
+    socket.on('new_alert', (data) => {
+        loadStats();
+    });
+
+    socket.on('node_update', (data) => {
+        loadStats();
+    });
+
+    socket.on('ai_mode_changed', (data) => {
+        document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+        document.getElementById('ai-mode-select').value = data.mode;
+        updateAiModeDesc(data.mode);
+    });
 </script>
 {% endblock %}
