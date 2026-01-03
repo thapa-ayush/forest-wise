@@ -30,6 +30,7 @@ void display_detailed_status(int battery_percent, bool gps_fix, double lat, doub
 void display_live_stats(int battery_percent, bool gps_fix, double lat, double lon,
                         bool mic_ok, float audio_level, float energy,
                         int alert_count, int specs_sent,
-                        int lora_tx_count = 0, unsigned long last_tx_time = 0, bool hub_ack = false);
+                        int lora_tx_count = 0, unsigned long last_tx_time = 0, bool hub_ack = false,
+                        int gps_satellites = 0);
 
 #endif // DISPLAY_HANDLER_H

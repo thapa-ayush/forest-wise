@@ -299,6 +299,7 @@ void update_display()
     last_display_update = millis();
 
     int battery = (int)read_battery_percent();
+    int satellites = gps_get_satellites();  // Get satellite count for display
 
     // Always show single live stats page with LoRa/hub status
     display_live_stats(
@@ -313,7 +314,8 @@ void update_display()
         total_spectrograms_sent,
         lora_get_tx_count(), // LoRa TX count
         last_lora_tx_time,   // Last TX timestamp
-        hub_acknowledged     // Hub connection status
+        hub_acknowledged,    // Hub connection status
+        satellites           // GPS satellite count
     );
 }
 

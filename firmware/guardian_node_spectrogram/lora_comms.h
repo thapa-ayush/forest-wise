@@ -46,9 +46,9 @@ float lora_get_snr();
 // Check if LoRa is ready
 bool lora_is_ready();
 
-// Receive data (non-blocking)
+// Receive data with timeout
 // Returns number of bytes received, 0 if none, -1 on error
-int lora_receive(uint8_t* buffer, size_t max_len);
+int lora_receive(uint8_t* buffer, size_t max_len, uint16_t timeout_ms = 100);
 
 // Check for hub ACK (returns true if ACK received from hub)
 bool lora_check_for_ack();

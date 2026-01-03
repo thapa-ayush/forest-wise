@@ -234,14 +234,15 @@ void display_progress(const char *title, int percent)
 void display_detailed_status(int battery_percent, bool gps_fix, double lat, double lon, bool mic_ok, float audio_level, int alert_count)
 {
     // Redirect to live stats (compatibility wrapper)
-    display_live_stats(battery_percent, gps_fix, lat, lon, mic_ok, audio_level, 0, alert_count, 0, 0, 0, false);
+    display_live_stats(battery_percent, gps_fix, lat, lon, mic_ok, audio_level, 0, alert_count, 0, 0, 0, false, 0);
 }
 
 // NEW: Single page with all live stats and LoRa/hub status
 void display_live_stats(int battery_percent, bool gps_fix, double lat, double lon,
                         bool mic_ok, float audio_level, float energy,
                         int alert_count, int specs_sent,
-                        int lora_tx_count, unsigned long last_tx_time, bool hub_ack)
+                        int lora_tx_count, unsigned long last_tx_time, bool hub_ack,
+                        int gps_satellites)
 {
     display.clearBuffer();
     display.setFont(u8g2_font_5x7_tf);
@@ -288,7 +289,17 @@ void display_live_stats(int battery_percent, bool gps_fix, double lat, double lo
     }
     else
     {
-        display.drawStr(22, 18, "No Fix");
+        // Show satellite count while searching
+        char sat_str[16];
+        if (gps_satellites > 0)
+        {
+            snprintf(sat_str, sizeof(sat_str), "Search %dsat", gps_satellites);
+        }
+        else
+        {
+            snprintf(sat_str, sizeof(sat_str), "No Sats");
+        }
+        display.drawStr(22, 18, sat_str);
     }
 
     // === ROW 3: Audio level bar ===
