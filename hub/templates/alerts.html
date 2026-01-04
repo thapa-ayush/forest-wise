@@ -1,36 +1,439 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Alerts</h1>
-<table class="w-full text-left">
-    <thead>
-        <tr class="border-b border-gray-700">
-            <th class="py-2">ID</th>
-            <th>Node</th>
-            <th>Confidence</th>
-            <th>Location</th>
-            <th>Time</th>
-            <th>Responded</th>
-            <th></th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for a in alerts %}
-        <tr class="border-b border-gray-800">
-            <td class="py-2">{{ a.id }}</td>
-            <td>{{ a.node_id }}</td>
-            <td>{{ a.confidence }}%</td>
-            <td>{{ a.lat }}, {{ a.lon }}</td>
-            <td>{{ a.timestamp }}</td>
-            <td>{{ 'Yes' if a.responded else 'No' }}</td>
-            <td>
-                {% if not a.responded %}
-                <form method="post" action="/api/alerts/{{ a.id }}/respond">
-                    <button class="btn-primary px-2 py-1 rounded text-xs">Respond</button>
-                </form>
-                {% endif %}
-            </td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- Page Header -->
+<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+            <svg class="w-7 h-7 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Alert History
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">View and manage chainsaw detection alerts</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <span id="alert-stats" class="text-sm text-gray-400">
+            <span id="total-alerts">0</span> total alerts
+        </span>
+    </div>
+</div>
+
+<!-- Date Filter Controls -->
+<div class="card mb-6">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 p-4">
+        <!-- Date Navigation -->
+        <div class="flex items-center gap-3">
+            <button id="prev-date" class="btn btn-secondary p-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            <div class="flex items-center gap-2">
+                <input type="date" id="date-picker"
+                    class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none">
+                <select id="view-mode"
+                    class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white focus:border-emerald-500 focus:outline-none">
+                    <option value="day">Day</option>
+                    <option value="month">Month</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+            <button id="next-date" class="btn btn-secondary p-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+            <button id="today-btn" class="btn btn-secondary text-sm">Today</button>
+        </div>
+
+        <!-- Quick Filters & Actions -->
+        <div class="flex items-center gap-2">
+            <select id="status-filter"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-white text-sm focus:border-emerald-500 focus:outline-none">
+                <option value="all">All Status</option>
+                <option value="unresponded">Unresponded</option>
+                <option value="responded">Responded</option>
+            </select>
+            <button id="clear-filtered-btn" class="btn btn-danger text-sm flex items-center gap-1"
+                title="Clear filtered alerts">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Clear
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Current Period Display -->
+<div class="mb-4">
+    <h2 id="period-display" class="text-lg font-semibold text-gray-300">Loading...</h2>
+    <p id="alerts-count-display" class="text-sm text-gray-500">0 alerts found</p>
+</div>
+
+<!-- Alerts Grid -->
+<div id="alerts-container" class="space-y-3">
+    <div class="text-center py-12 text-gray-500">
+        <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <p>Loading alerts...</p>
+    </div>
+</div>
+
+<!-- Pagination -->
+<div id="pagination" class="flex justify-center items-center gap-2 mt-6 hidden">
+    <button id="prev-page" class="btn btn-secondary p-2" disabled>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+        </svg>
+    </button>
+    <span id="page-info" class="text-sm text-gray-400 px-4">Page 1 of 1</span>
+    <button id="next-page" class="btn btn-secondary p-2" disabled>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+        </svg>
+    </button>
+</div>
+
+<!-- Clear Confirmation Modal -->
+<div id="clear-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 hidden">
+    <div class="card max-w-md w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Clear Alerts</h3>
+                    <p class="text-sm text-gray-400">This action cannot be undone</p>
+                </div>
+            </div>
+            <p id="clear-modal-message" class="text-gray-300 mb-6">Are you sure you want to clear all filtered alerts?
+            </p>
+            <div class="flex gap-3 justify-end">
+                <button id="cancel-clear" class="btn btn-secondary">Cancel</button>
+                <button id="confirm-clear" class="btn btn-danger">Clear Alerts</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // State
+    let currentDate = new Date();
+    let viewMode = 'day';
+    let statusFilter = 'all';
+    let currentPage = 1;
+    const perPage = 20;
+    let totalAlerts = 0;
+    let filteredAlertIds = [];
+
+    // DOM Elements
+    const datePicker = document.getElementById('date-picker');
+    const viewModeSelect = document.getElementById('view-mode');
+    const statusFilterSelect = document.getElementById('status-filter');
+    const periodDisplay = document.getElementById('period-display');
+    const alertsCountDisplay = document.getElementById('alerts-count-display');
+    const alertsContainer = document.getElementById('alerts-container');
+    const pagination = document.getElementById('pagination');
+    const pageInfo = document.getElementById('page-info');
+    const clearModal = document.getElementById('clear-modal');
+
+    // Initialize
+    function init() {
+        // Set date picker to today
+        datePicker.value = formatDateForInput(currentDate);
+
+        // Event listeners
+        datePicker.addEventListener('change', () => {
+            currentDate = new Date(datePicker.value + 'T12:00:00');
+            currentPage = 1;
+            loadAlerts();
+        });
+
+        viewModeSelect.addEventListener('change', () => {
+            viewMode = viewModeSelect.value;
+            currentPage = 1;
+            loadAlerts();
+        });
+
+        statusFilterSelect.addEventListener('change', () => {
+            statusFilter = statusFilterSelect.value;
+            currentPage = 1;
+            loadAlerts();
+        });
+
+        document.getElementById('prev-date').addEventListener('click', navigatePrev);
+        document.getElementById('next-date').addEventListener('click', navigateNext);
+        document.getElementById('today-btn').addEventListener('click', goToToday);
+        document.getElementById('prev-page').addEventListener('click', () => { currentPage--; loadAlerts(); });
+        document.getElementById('next-page').addEventListener('click', () => { currentPage++; loadAlerts(); });
+        document.getElementById('clear-filtered-btn').addEventListener('click', showClearModal);
+        document.getElementById('cancel-clear').addEventListener('click', hideClearModal);
+        document.getElementById('confirm-clear').addEventListener('click', clearAlerts);
+
+        // Load initial data
+        loadAlerts();
+        loadTotalStats();
+    }
+
+    function formatDateForInput(date) {
+        return date.toISOString().split('T')[0];
+    }
+
+    function navigatePrev() {
+        if (viewMode === 'day') {
+            currentDate.setDate(currentDate.getDate() - 1);
+        } else if (viewMode === 'month') {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+        }
+        datePicker.value = formatDateForInput(currentDate);
+        currentPage = 1;
+        loadAlerts();
+    }
+
+    function navigateNext() {
+        if (viewMode === 'day') {
+            currentDate.setDate(currentDate.getDate() + 1);
+        } else if (viewMode === 'month') {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+        }
+        datePicker.value = formatDateForInput(currentDate);
+        currentPage = 1;
+        loadAlerts();
+    }
+
+    function goToToday() {
+        currentDate = new Date();
+        datePicker.value = formatDateForInput(currentDate);
+        currentPage = 1;
+        loadAlerts();
+    }
+
+    function updatePeriodDisplay() {
+        const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+        if (viewMode === 'day') {
+            periodDisplay.textContent = currentDate.toLocaleDateString('en-US', options);
+        } else if (viewMode === 'month') {
+            periodDisplay.textContent = currentDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+        } else {
+            periodDisplay.textContent = 'All Time';
+        }
+    }
+
+    function loadAlerts() {
+        updatePeriodDisplay();
+
+        let url = '/api/alerts/filtered?';
+        const params = new URLSearchParams();
+
+        if (viewMode !== 'all') {
+            if (viewMode === 'day') {
+                params.set('date', formatDateForInput(currentDate));
+            } else if (viewMode === 'month') {
+                params.set('month', (currentDate.getMonth() + 1).toString());
+                params.set('year', currentDate.getFullYear().toString());
+            }
+        }
+
+        if (statusFilter !== 'all') {
+            params.set('status', statusFilter);
+        }
+
+        params.set('page', currentPage.toString());
+        params.set('per_page', perPage.toString());
+
+        alertsContainer.innerHTML = '<div class="text-center py-12"><div class="animate-spin w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full mx-auto"></div><p class="text-gray-500 mt-3">Loading alerts...</p></div>';
+
+        fetch(url + params.toString())
+            .then(r => r.json())
+            .then(data => {
+                renderAlerts(data.alerts || []);
+                totalAlerts = data.total || 0;
+                filteredAlertIds = (data.alerts || []).map(a => a.id);
+
+                alertsCountDisplay.textContent = `${totalAlerts} alert${totalAlerts !== 1 ? 's' : ''} found`;
+
+                // Update pagination
+                const totalPages = Math.ceil(totalAlerts / perPage);
+                if (totalPages > 1) {
+                    pagination.classList.remove('hidden');
+                    pageInfo.textContent = `Page ${currentPage} of ${totalPages}`;
+                    document.getElementById('prev-page').disabled = currentPage <= 1;
+                    document.getElementById('next-page').disabled = currentPage >= totalPages;
+                } else {
+                    pagination.classList.add('hidden');
+                }
+            })
+            .catch(err => {
+                console.error('Error loading alerts:', err);
+                alertsContainer.innerHTML = '<div class="text-center py-12 text-red-400"><svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg><p>Error loading alerts</p></div>';
+            });
+    }
+
+    function loadTotalStats() {
+        fetch('/api/alerts')
+            .then(r => r.json())
+            .then(data => {
+                document.getElementById('total-alerts').textContent = data.length;
+            })
+            .catch(() => { });
+    }
+
+    function renderAlerts(alerts) {
+        if (!alerts || alerts.length === 0) {
+            alertsContainer.innerHTML = `
+                <div class="text-center py-12 text-gray-500">
+                    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <p class="text-lg font-medium">No alerts for this period</p>
+                    <p class="text-sm mt-1">The forest is quiet - no chainsaw activity detected</p>
+                </div>
+            `;
+            return;
+        }
+
+        alertsContainer.innerHTML = alerts.map(alert => {
+            const date = new Date(alert.timestamp);
+            const confidenceColor = alert.confidence >= 90 ? 'text-red-400'
+                : alert.confidence >= 70 ? 'text-orange-400'
+                    : alert.confidence >= 50 ? 'text-yellow-400'
+                        : 'text-gray-400';
+
+            const statusBadge = alert.responded
+                ? '<span class="status-badge online"><span class="status-dot"></span>Responded</span>'
+                : '<span class="status-badge offline"><span class="status-dot"></span>Pending</span>';
+
+            return `
+                <div class="card hover:border-gray-600 transition-colors">
+                    <div class="p-4">
+                        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                            <!-- Alert Info -->
+                            <div class="flex items-start gap-4">
+                                <div class="w-12 h-12 rounded-lg bg-red-500/20 flex items-center justify-center flex-shrink-0">
+                                    <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                    </svg>
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="font-semibold text-white">${alert.node_id}</span>
+                                        ${statusBadge}
+                                    </div>
+                                    <div class="text-sm text-gray-400">
+                                        <span class="inline-flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>
+                                            </svg>
+                                            ${alert.lat ? alert.lat.toFixed(4) : '-'}, ${alert.lon ? alert.lon.toFixed(4) : '-'}
+                                        </span>
+                                    </div>
+                                    <div class="text-xs text-gray-500 mt-1">
+                                        ${date.toLocaleString()}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Confidence & Actions -->
+                            <div class="flex items-center gap-4">
+                                <div class="text-center">
+                                    <div class="text-xs text-gray-500 mb-1">Confidence</div>
+                                    <div class="text-2xl font-bold ${confidenceColor}">${alert.confidence}%</div>
+                                </div>
+                                ${!alert.responded ? `
+                                    <button onclick="respondToAlert(${alert.id})" class="btn btn-primary text-sm">
+                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                                        </svg>
+                                        Respond
+                                    </button>
+                                ` : `
+                                    <div class="text-xs text-gray-500">
+                                        <div>Responded by</div>
+                                        <div class="text-emerald-400">${alert.responded_by || 'Admin'}</div>
+                                    </div>
+                                `}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function respondToAlert(alertId) {
+        fetch(`/api/alerts/${alertId}/respond`, { method: 'POST' })
+            .then(r => r.json())
+            .then(data => {
+                if (data.success) {
+                    loadAlerts();
+                    loadTotalStats();
+                }
+            })
+            .catch(err => console.error('Error responding to alert:', err));
+    }
+
+    function showClearModal() {
+        const count = filteredAlertIds.length;
+        document.getElementById('clear-modal-message').textContent =
+            `Are you sure you want to clear ${count} alert${count !== 1 ? 's' : ''} from the current view?`;
+        clearModal.classList.remove('hidden');
+    }
+
+    function hideClearModal() {
+        clearModal.classList.add('hidden');
+    }
+
+    function clearAlerts() {
+        const params = new URLSearchParams();
+
+        if (viewMode !== 'all') {
+            if (viewMode === 'day') {
+                params.set('date', formatDateForInput(currentDate));
+            } else if (viewMode === 'month') {
+                params.set('month', (currentDate.getMonth() + 1).toString());
+                params.set('year', currentDate.getFullYear().toString());
+            }
+        }
+
+        if (statusFilter !== 'all') {
+            params.set('status', statusFilter);
+        }
+
+        fetch('/api/alerts/clear?' + params.toString(), { method: 'DELETE' })
+            .then(r => r.json())
+            .then(data => {
+                hideClearModal();
+                if (data.success) {
+                    loadAlerts();
+                    loadTotalStats();
+                } else {
+                    alert('Failed to clear alerts: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch(err => {
+                hideClearModal();
+                console.error('Error clearing alerts:', err);
+                alert('Error clearing alerts');
+            });
+    }
+
+    // Initialize on load
+    init();
+
+    // Socket.IO for real-time updates (socket declared in app.js)
+    socket.on('new_alert', () => {
+        loadAlerts();
+        loadTotalStats();
+    });
+</script>
 {% endblock %}

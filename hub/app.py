@@ -29,7 +29,7 @@ app.config.from_object(Config)
 CORS(app)
 csrf = CSRFProtect(app)
 csrf.exempt(auth_bp)  # Exempt auth routes from CSRF for simpler login
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 login_manager.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(auth_bp)
@@ -68,7 +68,23 @@ def alerts_view():
 @app.route('/nodes')
 @login_required
 def nodes_view():
-    nodes = query_db('SELECT * FROM nodes')
+    nodes_raw = query_db('SELECT * FROM nodes')
+    nodes = []
+    for n in nodes_raw:
+        node = dict(n)
+        # Calculate online status based on last_seen (online if seen within 2 minutes)
+        if node.get('last_seen'):
+            try:
+                last_seen = datetime.fromisoformat(node['last_seen'].replace('Z', ''))
+                if last_seen.tzinfo:
+                    last_seen = last_seen.replace(tzinfo=None)
+                time_diff = (datetime.now() - last_seen).total_seconds()
+                node['status'] = 'online' if time_diff < 120 else 'offline'
+            except:
+                node['status'] = 'offline'
+        else:
+            node['status'] = 'offline'
+        nodes.append(node)
     return render_template('nodes.html', nodes=nodes)
 
 @app.route('/reports')
@@ -84,14 +100,122 @@ def api_status():
 @app.route('/api/nodes')
 @login_required
 def api_nodes():
+    # Get all nodes and calculate online status based on last_seen
     nodes = query_db('SELECT * FROM nodes')
-    return jsonify([dict(n) for n in nodes])
+    result = []
+    for n in nodes:
+        node = dict(n)
+        # Node is considered online if seen within last 2 minutes
+        if node.get('last_seen'):
+            try:
+                last_seen = datetime.fromisoformat(node['last_seen'].replace('Z', ''))
+                # Make last_seen timezone-naive for comparison
+                if last_seen.tzinfo:
+                    last_seen = last_seen.replace(tzinfo=None)
+                time_diff = (datetime.now() - last_seen).total_seconds()
+                node['is_online'] = time_diff < 120  # 2 minutes
+            except:
+                node['is_online'] = False
+        else:
+            node['is_online'] = False
+        result.append(node)
+    return jsonify(result)
 
 @app.route('/api/alerts')
 @login_required
 def api_alerts():
-    alerts = query_db('SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100')
+    unresponded_only = request.args.get('unresponded', 'false').lower() == 'true'
+    
+    if unresponded_only:
+        alerts = query_db('SELECT * FROM alerts WHERE responded = 0 ORDER BY timestamp DESC LIMIT 100')
+    else:
+        alerts = query_db('SELECT * FROM alerts ORDER BY timestamp DESC LIMIT 100')
     return jsonify([dict(a) for a in alerts])
+
+@app.route('/api/alerts/filtered')
+@login_required
+def api_alerts_filtered():
+    """Get filtered alerts by date, month, or status with pagination"""
+    date = request.args.get('date')  # YYYY-MM-DD
+    month = request.args.get('month')  # 1-12
+    year = request.args.get('year')  # YYYY
+    status = request.args.get('status')  # all, responded, unresponded
+    page = int(request.args.get('page', 1))
+    per_page = int(request.args.get('per_page', 20))
+    
+    # Build query
+    conditions = []
+    params = []
+    
+    if date:
+        conditions.append("date(timestamp) = date(?)")
+        params.append(date)
+    elif month and year:
+        conditions.append("strftime('%m', timestamp) = ?")
+        conditions.append("strftime('%Y', timestamp) = ?")
+        params.append(str(month).zfill(2))
+        params.append(str(year))
+    
+    if status == 'responded':
+        conditions.append("responded = 1")
+    elif status == 'unresponded':
+        conditions.append("responded = 0")
+    
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+    # Get total count
+    count_query = f"SELECT COUNT(*) as count FROM alerts WHERE {where_clause}"
+    total = query_db(count_query, params, one=True)['count']
+    
+    # Get paginated results
+    offset = (page - 1) * per_page
+    data_query = f"SELECT * FROM alerts WHERE {where_clause} ORDER BY timestamp DESC LIMIT ? OFFSET ?"
+    alerts = query_db(data_query, params + [per_page, offset])
+    
+    return jsonify({
+        'alerts': [dict(a) for a in alerts] if alerts else [],
+        'total': total,
+        'page': page,
+        'per_page': per_page
+    })
+
+@app.route('/api/alerts/clear', methods=['DELETE'])
+@login_required
+def api_clear_alerts():
+    """Clear alerts based on filters"""
+    date = request.args.get('date')
+    month = request.args.get('month')
+    year = request.args.get('year')
+    status = request.args.get('status')
+    
+    # Build query
+    conditions = []
+    params = []
+    
+    if date:
+        conditions.append("date(timestamp) = date(?)")
+        params.append(date)
+    elif month and year:
+        conditions.append("strftime('%m', timestamp) = ?")
+        conditions.append("strftime('%Y', timestamp) = ?")
+        params.append(str(month).zfill(2))
+        params.append(str(year))
+    
+    if status == 'responded':
+        conditions.append("responded = 1")
+    elif status == 'unresponded':
+        conditions.append("responded = 0")
+    
+    where_clause = " AND ".join(conditions) if conditions else "1=1"
+    
+    try:
+        db = get_db()
+        result = db.execute(f"DELETE FROM alerts WHERE {where_clause}", params)
+        db.commit()
+        deleted_count = result.rowcount
+        return jsonify({'success': True, 'deleted': deleted_count})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/alerts/<int:alert_id>/respond', methods=['POST'])
 @login_required
@@ -122,12 +246,65 @@ def api_lora_status():
     try:
         from lora_receiver import get_receiver
         rx = get_receiver()
+        stats = rx.get_stats()
+        
+        # Add health check info
+        health = 'healthy'
+        if stats.get('last_packet_time'):
+            last_packet = datetime.fromisoformat(stats['last_packet_time'])
+            time_since = (datetime.now() - last_packet).total_seconds()
+            if time_since > 300:  # 5 minutes
+                health = 'warning'
+            if time_since > 600:  # 10 minutes
+                health = 'critical'
+        
         return jsonify({
             'status': 'running' if rx.running else 'stopped',
-            'stats': rx.get_stats()
+            'health': health,
+            'stats': stats
         })
     except Exception as e:
-        return jsonify({'status': 'error', 'error': str(e)})
+        return jsonify({'status': 'error', 'health': 'critical', 'error': str(e)})
+
+@app.route('/api/health')
+def api_health():
+    """System health check endpoint"""
+    health = {'status': 'ok', 'components': {}}
+    
+    # Check database
+    try:
+        db = get_db()
+        db.execute('SELECT 1')
+        health['components']['database'] = 'ok'
+    except:
+        health['components']['database'] = 'error'
+        health['status'] = 'degraded'
+    
+    # Check LoRa receiver
+    try:
+        from lora_receiver import get_receiver
+        rx = get_receiver()
+        health['components']['lora'] = 'ok' if rx.running else 'stopped'
+        if not rx.running:
+            health['status'] = 'degraded'
+    except:
+        health['components']['lora'] = 'error'
+        health['status'] = 'degraded'
+    
+    # Check nodes online
+    try:
+        nodes = query_db('SELECT node_id, last_seen FROM nodes')
+        online_count = 0
+        for n in nodes:
+            if n['last_seen']:
+                last_seen = datetime.fromisoformat(n['last_seen'].replace('Z', ''))
+                if (datetime.now() - last_seen).total_seconds() < 120:
+                    online_count += 1
+        health['components']['nodes_online'] = online_count
+    except:
+        health['components']['nodes_online'] = 0
+    
+    return jsonify(health)
 
 
 # =============================================================================
@@ -251,6 +428,104 @@ def api_spectrogram_stats():
         AND timestamp > datetime("now", "-1 day")
     ''', one=True)
     stats['chainsaw_24h'] = chainsaw['count'] if chainsaw else 0
+    
+    return jsonify(stats)
+
+
+@app.route('/api/dashboard/stats')
+@login_required
+def api_dashboard_stats():
+    """Get dashboard statistics with date filtering"""
+    date = request.args.get('date')  # YYYY-MM-DD
+    month = request.args.get('month')  # YYYY-MM
+    year = request.args.get('year')  # YYYY
+    
+    stats = {'alerts': 0, 'spectrograms': 0, 'chainsaws': 0}
+    
+    if date:
+        # Specific day stats
+        alerts = query_db('''
+            SELECT COUNT(*) as count FROM alerts 
+            WHERE date(timestamp) = date(?)
+        ''', [date], one=True)
+        stats['alerts'] = alerts['count'] if alerts else 0
+        
+        specs = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE date(timestamp) = date(?)
+        ''', [date], one=True)
+        stats['spectrograms'] = specs['count'] if specs else 0
+        
+        chainsaws = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE classification = "chainsaw" 
+            AND date(timestamp) = date(?)
+        ''', [date], one=True)
+        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
+        
+    elif month:
+        # Monthly stats
+        year_val, month_val = month.split('-')
+        alerts = query_db('''
+            SELECT COUNT(*) as count FROM alerts 
+            WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
+        ''', [year_val, month_val], one=True)
+        stats['alerts'] = alerts['count'] if alerts else 0
+        
+        specs = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
+        ''', [year_val, month_val], one=True)
+        stats['spectrograms'] = specs['count'] if specs else 0
+        
+        chainsaws = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE classification = "chainsaw" 
+            AND strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
+        ''', [year_val, month_val], one=True)
+        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
+        
+    elif year:
+        # Yearly stats
+        alerts = query_db('''
+            SELECT COUNT(*) as count FROM alerts 
+            WHERE strftime('%Y', timestamp) = ?
+        ''', [year], one=True)
+        stats['alerts'] = alerts['count'] if alerts else 0
+        
+        specs = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE strftime('%Y', timestamp) = ?
+        ''', [year], one=True)
+        stats['spectrograms'] = specs['count'] if specs else 0
+        
+        chainsaws = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE classification = "chainsaw" 
+            AND strftime('%Y', timestamp) = ?
+        ''', [year], one=True)
+        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
+        
+    else:
+        # Current/Live stats (today only)
+        alerts = query_db('''
+            SELECT COUNT(*) as count FROM alerts 
+            WHERE date(timestamp) = date("now", "localtime")
+        ''', one=True)
+        stats['alerts'] = alerts['count'] if alerts else 0
+        
+        specs = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE date(timestamp) = date("now", "localtime")
+        ''', one=True)
+        stats['spectrograms'] = specs['count'] if specs else 0
+        
+        chainsaws = query_db('''
+            SELECT COUNT(*) as count FROM spectrograms 
+            WHERE classification = "chainsaw" 
+            AND date(timestamp) = date("now", "localtime")
+        ''', one=True)
+        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
     
     return jsonify(stats)
 
@@ -544,19 +819,14 @@ def process_spectrogram_message(db, data, rssi, timestamp):
                     'recommended_action': result.get('recommended_action')
                 })
                 
-                # If chainsaw detected, create an alert
+                # If chainsaw detected, UPDATE the existing pending alert (don't create duplicate)
                 if result.get('classification') == 'chainsaw' and result.get('confidence', 0) >= 70:
                     db.execute('''
-                        INSERT INTO alerts 
-                        (node_id, confidence, lat, lon, timestamp, rssi, ai_analysis, spectrogram_id)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                        UPDATE alerts 
+                        SET confidence = ?, ai_analysis = ?
+                        WHERE spectrogram_id = ?
                     ''', [
-                        node_id,
                         result.get('confidence'),
-                        lat,
-                        lon,
-                        timestamp,
-                        rssi,
                         f"AI Vision: {result.get('reasoning')}",
                         spec_id
                     ])
@@ -570,6 +840,11 @@ def process_spectrogram_message(db, data, rssi, timestamp):
                     socketio.emit('new_alert', notification)
                     
                     logging.warning(f"🚨 CHAINSAW CONFIRMED by AI Vision at ({lat}, {lon})")
+                else:
+                    # Not a chainsaw - delete the pending alert
+                    db.execute('DELETE FROM alerts WHERE spectrogram_id = ?', [spec_id])
+                    db.commit()
+                    logging.info(f"✅ AI classified as {result.get('classification')} - alert removed")
             else:
                 logging.warning(f"AI Analysis failed: {result.get('error')}")
                 

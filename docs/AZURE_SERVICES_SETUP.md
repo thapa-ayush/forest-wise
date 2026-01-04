@@ -54,7 +54,7 @@ GPT-4o Vision analyzes spectrogram images to detect chainsaw sounds with detaile
 
 | Setting | Value |
 |---------|-------|
-| Model | `gpt-4o` |
+| Model | ` ` |
 | Deployment name | `gpt-4o` |
 | Deployment type | Standard |
 | Tokens per minute | 10K (adjust as needed) |

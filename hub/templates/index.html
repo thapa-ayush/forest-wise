@@ -1,10 +1,13 @@
 {% extends 'base.html' %}
 {% block content %}
 <!-- Page Header -->
-<div class="flex items-center justify-between mb-8">
+<div class="flex items-center justify-between mb-6">
     <div>
         <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-            <span class="text-4xl">🌲</span>
+            <svg class="w-10 h-10 text-emerald-400" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z" />
+                <rect x="10" y="18" width="4" height="4" fill="currentColor" opacity="0.6" />
+            </svg>
             Forest Guardian
         </h1>
         <p class="text-gray-400 mt-1">Real-time forest monitoring & illegal logging detection</p>
@@ -18,45 +21,101 @@
     </div>
 </div>
 
+<!-- Date Filter Bar -->
+<div class="card mb-6">
+    <div class="p-4 flex flex-wrap items-center gap-4">
+        <!-- View Mode Selector -->
+        <div class="flex items-center gap-2">
+            <label class="text-sm text-gray-400">View:</label>
+            <select id="view-mode"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
+                <option value="current">Current (Live)</option>
+                <option value="day">Day</option>
+                <option value="month">Month</option>
+                <option value="year">Year</option>
+            </select>
+        </div>
+
+        <!-- Date Input (for day view) -->
+        <div id="date-picker-container" class="hidden flex items-center gap-2">
+            <input type="date" id="date-picker"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Month Input (for month view) -->
+        <div id="month-picker-container" class="hidden flex items-center gap-2">
+            <input type="month" id="month-picker"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
+        </div>
+
+        <!-- Year Input (for year view) -->
+        <div id="year-picker-container" class="hidden flex items-center gap-2">
+            <select id="year-picker"
+                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
+                <option value="2026">2026</option>
+                <option value="2025">2025</option>
+                <option value="2024">2024</option>
+            </select>
+        </div>
+
+        <!-- Period Display -->
+        <div class="flex-1 text-center">
+            <span id="period-display" class="text-lg font-semibold text-white">Live Stats</span>
+        </div>
+
+        <!-- Reset Button -->
+        <button id="reset-filter" class="btn btn-secondary text-sm hidden">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Reset
+        </button>
+    </div>
+</div>
+
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
     <div class="stat-card nodes">
         <div class="stat-icon">
             <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
             </svg>
         </div>
         <div class="stat-label">Active Nodes</div>
         <div class="stat-value" id="node-count">-</div>
     </div>
-    
+
     <div class="stat-card alerts">
         <div class="stat-icon">
             <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
         </div>
-        <div class="stat-label">Active Alerts</div>
+        <div class="stat-label" id="alert-label">Alerts</div>
         <div class="stat-value" id="alert-count">-</div>
     </div>
-    
+
     <div class="stat-card spectrograms">
         <div class="stat-icon">
             <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
             </svg>
         </div>
-        <div class="stat-label">Spectrograms (24h)</div>
+        <div class="stat-label" id="spec-label">Spectrograms</div>
         <div class="stat-value" id="spec-count">-</div>
     </div>
-    
+
     <div class="stat-card detections">
         <div class="stat-icon">
             <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
             </svg>
         </div>
-        <div class="stat-label">Chainsaw Detections</div>
+        <div class="stat-label" id="chainsaw-label">Chainsaw Detections</div>
         <div class="stat-value" id="chainsaw-count">-</div>
     </div>
 </div>
@@ -68,7 +127,8 @@
         <div class="card-header">
             <h2 class="card-title">
                 <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
                 </svg>
                 Recent Spectrograms
             </h2>
@@ -90,19 +150,23 @@
         <div class="card-header">
             <h2 class="card-title">
                 <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 AI Analysis Results
             </h2>
-            <span id="ai-provider-badge" class="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400">GPT-4o Vision</span>
+            <span id="ai-provider-badge" class="text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400">GPT-4o
+                Vision</span>
         </div>
-        
+
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
             <!-- Spectrogram Image -->
             <div id="spectrogram-preview" class="spectrogram-preview">
                 <div class="text-gray-500 py-8">
-                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                     </svg>
                     <p class="text-sm">Select a spectrogram to view</p>
                 </div>
@@ -112,8 +176,10 @@
             <!-- Analysis Details -->
             <div id="latest-analysis">
                 <div class="text-center py-8 text-gray-500">
-                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    <svg class="w-12 h-12 mx-auto mb-3 opacity-50" fill="none" stroke="currentColor"
+                        viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                     </svg>
                     <p class="text-sm">No analysis selected</p>
                     <p class="text-xs mt-1 text-gray-600">Click a spectrogram to see AI analysis</p>
@@ -130,7 +196,8 @@
         <div class="card-header">
             <h2 class="card-title">
                 <svg class="w-5 h-5 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
                 </svg>
                 LoRa Radio Status
             </h2>
@@ -167,7 +234,8 @@
         <div class="card-header">
             <h2 class="card-title">
                 <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                 </svg>
                 AI Analysis Mode
             </h2>
@@ -178,13 +246,13 @@
                 <span id="current-ai-mode" class="font-bold text-emerald-400">-</span>
             </div>
             <select id="ai-mode-select" class="w-full">
-                <option value="gpt4o">🧠 GPT-4o Vision (Detailed)</option>
-                <option value="custom_vision">⚡ Custom Vision (Fast)</option>
-                <option value="auto">🔄 Auto (CV + GPT-4o verify)</option>
+                <option value="gpt4o">● GPT-4o Vision (Detailed)</option>
+                <option value="custom_vision">● Custom Vision (Fast)</option>
+                <option value="auto">● Auto (CV + GPT-4o verify)</option>
             </select>
             <button id="apply-ai-mode" class="btn btn-primary w-full">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
                 </svg>
                 Apply Changes
             </button>
@@ -197,7 +265,8 @@
         <div class="card-header">
             <h2 class="card-title">
                 <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
                 Service Status
             </h2>
@@ -205,7 +274,10 @@
         <div class="space-y-3">
             <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
                 <div class="flex items-center gap-2">
-                    <span class="text-lg">🧠</span>
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
                     <span class="text-sm text-white">Azure GPT-4o</span>
                 </div>
                 <span id="gpt4o-status" class="status-badge pending">
@@ -215,7 +287,10 @@
             </div>
             <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
                 <div class="flex items-center gap-2">
-                    <span class="text-lg">⚡</span>
+                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
                     <span class="text-sm text-white">Custom Vision</span>
                 </div>
                 <span id="cv-status" class="status-badge pending">
@@ -225,7 +300,10 @@
             </div>
             <div class="flex justify-between items-center p-3 bg-gray-800/50 rounded-lg">
                 <div class="flex items-center gap-2">
-                    <span class="text-lg">📡</span>
+                    <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                    </svg>
                     <span class="text-sm text-white">LoRa Receiver</span>
                 </div>
                 <span id="lora-service-status" class="status-badge online">
@@ -240,47 +318,203 @@
 <script>
     // Global state
     let selectedSpectrogramId = null;
+    let currentViewMode = 'current';
+    let currentDate = new Date().toISOString().split('T')[0];
+    let currentMonth = new Date().toISOString().slice(0, 7);
+    let currentYear = new Date().getFullYear().toString();
 
-    // Load initial stats
+    // Initialize date pickers with current values
+    document.getElementById('date-picker').value = currentDate;
+    document.getElementById('month-picker').value = currentMonth;
+    document.getElementById('year-picker').value = currentYear;
+
+    // View mode change handler
+    document.getElementById('view-mode').addEventListener('change', function () {
+        currentViewMode = this.value;
+        updateDatePickerVisibility();
+        updatePeriodDisplay();
+        loadFilteredStats();
+    });
+
+    // Date picker change handlers
+    document.getElementById('date-picker').addEventListener('change', function () {
+        currentDate = this.value;
+        updatePeriodDisplay();
+        loadFilteredStats();
+    });
+
+    document.getElementById('month-picker').addEventListener('change', function () {
+        currentMonth = this.value;
+        updatePeriodDisplay();
+        loadFilteredStats();
+    });
+
+    document.getElementById('year-picker').addEventListener('change', function () {
+        currentYear = this.value;
+        updatePeriodDisplay();
+        loadFilteredStats();
+    });
+
+    // Reset button handler
+    document.getElementById('reset-filter').addEventListener('click', function () {
+        document.getElementById('view-mode').value = 'current';
+        currentViewMode = 'current';
+        currentDate = new Date().toISOString().split('T')[0];
+        currentMonth = new Date().toISOString().slice(0, 7);
+        currentYear = new Date().getFullYear().toString();
+        document.getElementById('date-picker').value = currentDate;
+        document.getElementById('month-picker').value = currentMonth;
+        document.getElementById('year-picker').value = currentYear;
+        updateDatePickerVisibility();
+        updatePeriodDisplay();
+        loadFilteredStats();
+    });
+
+    function updateDatePickerVisibility() {
+        document.getElementById('date-picker-container').classList.add('hidden');
+        document.getElementById('month-picker-container').classList.add('hidden');
+        document.getElementById('year-picker-container').classList.add('hidden');
+        document.getElementById('reset-filter').classList.add('hidden');
+
+        if (currentViewMode === 'day') {
+            document.getElementById('date-picker-container').classList.remove('hidden');
+            document.getElementById('reset-filter').classList.remove('hidden');
+        } else if (currentViewMode === 'month') {
+            document.getElementById('month-picker-container').classList.remove('hidden');
+            document.getElementById('reset-filter').classList.remove('hidden');
+        } else if (currentViewMode === 'year') {
+            document.getElementById('year-picker-container').classList.remove('hidden');
+            document.getElementById('reset-filter').classList.remove('hidden');
+        }
+    }
+
+    function updatePeriodDisplay() {
+        const display = document.getElementById('period-display');
+        const alertLabel = document.getElementById('alert-label');
+        const specLabel = document.getElementById('spec-label');
+        const chainsawLabel = document.getElementById('chainsaw-label');
+
+        if (currentViewMode === 'current') {
+            const today = new Date();
+            display.textContent = 'Today - ' + today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            alertLabel.textContent = 'Alerts Today';
+            specLabel.textContent = 'Spectrograms Today';
+            chainsawLabel.textContent = 'Chainsaws Today';
+        } else if (currentViewMode === 'day') {
+            const date = new Date(currentDate);
+            display.textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            alertLabel.textContent = 'Alerts';
+            specLabel.textContent = 'Spectrograms';
+            chainsawLabel.textContent = 'Chainsaws';
+        } else if (currentViewMode === 'month') {
+            const [year, month] = currentMonth.split('-');
+            const date = new Date(year, month - 1);
+            display.textContent = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            alertLabel.textContent = 'Alerts';
+            specLabel.textContent = 'Spectrograms';
+            chainsawLabel.textContent = 'Chainsaws';
+        } else if (currentViewMode === 'year') {
+            display.textContent = 'Year ' + currentYear;
+            alertLabel.textContent = 'Alerts';
+            specLabel.textContent = 'Spectrograms';
+            chainsawLabel.textContent = 'Chainsaws';
+        }
+    }
+
+    // Load stats based on current filter with retry logic
+    function loadFilteredStats() {
+        // Always load live node count
+        fetch('/api/nodes')
+            .then(r => {
+                if (!r.ok) throw new Error('Network error');
+                return r.json();
+            })
+            .then(data => {
+                const onlineCount = data.filter(n => n.is_online).length;
+                const totalCount = data.length;
+                document.getElementById('node-count').textContent = onlineCount;
+                // Update title with total if there are offline nodes
+                const nodeCard = document.querySelector('.stat-card.nodes');
+                if (nodeCard && totalCount > onlineCount) {
+                    nodeCard.title = `${onlineCount} online, ${totalCount - onlineCount} offline`;
+                }
+            })
+            .catch(err => {
+                console.warn('Failed to load nodes:', err);
+                // Don't reset to 0 on network error - keep last value
+            });
+
+        // Build query params based on filter
+        let params = new URLSearchParams();
+        if (currentViewMode === 'day') {
+            params.set('date', currentDate);
+        } else if (currentViewMode === 'month') {
+            params.set('month', currentMonth);
+        } else if (currentViewMode === 'year') {
+            params.set('year', currentYear);
+        }
+        // current mode = no params (today's data)
+
+        const queryString = params.toString() ? '?' + params.toString() : '';
+
+        fetch('/api/dashboard/stats' + queryString)
+            .then(r => {
+                if (!r.ok) throw new Error('Network error');
+                return r.json();
+            })
+            .then(data => {
+                document.getElementById('alert-count').textContent = data.alerts || 0;
+                document.getElementById('spec-count').textContent = data.spectrograms || 0;
+                document.getElementById('chainsaw-count').textContent = data.chainsaws || 0;
+            })
+            .catch(err => {
+                console.warn('Failed to load stats:', err);
+                // Don't reset on network error - keep last values
+            });
+
+        // Load LoRa status (always live)
+        loadLoraStatus();
+    }
+
+    function loadLoraStatus() {
+        fetch('/api/lora/status')
+            .then(r => r.json())
+            .then(data => {
+                const badge = document.getElementById('lora-running');
+                const serviceBadge = document.getElementById('lora-service-status');
+                if (data.status === 'running') {
+                    badge.innerHTML = '<span class="status-dot"></span>Online';
+                    badge.className = 'status-badge online';
+                    serviceBadge.innerHTML = '<span class="status-dot"></span>Active';
+                    serviceBadge.className = 'status-badge online';
+
+                    // Show health warning if needed
+                    if (data.health === 'warning') {
+                        serviceBadge.innerHTML = '<span class="status-dot"></span>Warning';
+                        serviceBadge.className = 'status-badge';
+                        serviceBadge.style.background = 'rgba(245, 158, 11, 0.2)';
+                        serviceBadge.style.color = '#f59e0b';
+                    } else if (data.health === 'critical') {
+                        serviceBadge.innerHTML = '<span class="status-dot"></span>No Data';
+                        serviceBadge.className = 'status-badge offline';
+                    }
+                } else {
+                    badge.innerHTML = '<span class="status-dot"></span>Offline';
+                    badge.className = 'status-badge offline';
+                    serviceBadge.innerHTML = '<span class="status-dot"></span>Offline';
+                    serviceBadge.className = 'status-badge offline';
+                }
+            })
+            .catch(() => { });
+    }
+
+    // Legacy loadStats for compatibility
     function loadStats() {
-        fetch('/api/nodes').then(r => r.json()).then(data => {
-            document.getElementById('node-count').textContent = data.length;
-        }).catch(() => document.getElementById('node-count').textContent = '0');
+        loadFilteredStats();
+    }
 
-        fetch('/api/alerts').then(r => r.json()).then(data => {
-            document.getElementById('alert-count').textContent = data.length;
-        }).catch(() => document.getElementById('alert-count').textContent = '0');
-
-        fetch('/api/spectrograms/stats').then(r => r.json()).then(data => {
-            document.getElementById('spec-count').textContent = data.last_24h || 0;
-            document.getElementById('chainsaw-count').textContent = data.chainsaw_24h || 0;
-        }).catch(() => {
-            document.getElementById('spec-count').textContent = '0';
-            document.getElementById('chainsaw-count').textContent = '0';
-        });
-
-        fetch('/api/lora/status').then(r => r.json()).then(data => {
-            const badge = document.getElementById('lora-running');
-            const serviceBadge = document.getElementById('lora-service-status');
-            if (data.status === 'running') {
-                badge.innerHTML = '<span class="status-dot"></span>Online';
-                badge.className = 'status-badge online';
-                serviceBadge.innerHTML = '<span class="status-dot"></span>Active';
-                serviceBadge.className = 'status-badge online';
-            } else {
-                badge.innerHTML = '<span class="status-dot"></span>Offline';
-                badge.className = 'status-badge offline';
-                serviceBadge.innerHTML = '<span class="status-dot"></span>Offline';
-                serviceBadge.className = 'status-badge offline';
-            }
-            if (data.stats) {
-                document.getElementById('lora-packets').textContent = data.stats.packets_received || 0;
-                document.getElementById('lora-specs').textContent = data.stats.spectrograms_received || 0;
-                document.getElementById('lora-rssi').textContent = (data.stats.rssi_last || '-') + ' dBm';
-                document.getElementById('lora-snr').textContent = (data.stats.snr_last || '-') + ' dB';
-            }
-        }).catch(() => {});
-
+    // Update last update time
+    function updateLastUpdateTime() {
         document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
     }
 
@@ -336,15 +570,18 @@
 
             const providerBadge = document.getElementById('ai-provider-badge');
             if (s.ai_provider === 'gpt4o') {
-                providerBadge.textContent = '🧠 GPT-4o Vision';
+                providerBadge.textContent = 'GPT-4o Vision';
                 providerBadge.className = 'text-xs px-2 py-1 rounded-full bg-cyan-500/20 text-cyan-400';
             } else if (s.ai_provider === 'custom_vision') {
-                providerBadge.textContent = '⚡ Custom Vision';
+                providerBadge.textContent = 'Custom Vision';
                 providerBadge.className = 'text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400';
             }
 
             const isChainsaw = s.classification === 'chainsaw';
-            analysis.innerHTML = '<div class="space-y-4"><div class="text-center p-4 rounded-lg ' + (isChainsaw ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/30') + '"><div class="text-3xl mb-2">' + (isChainsaw ? '🚨' : '🌿') + '</div><div class="text-lg font-bold ' + (isChainsaw ? 'text-red-400' : 'text-emerald-400') + '">' + (s.classification || 'Unknown').toUpperCase() + '</div><div class="text-3xl font-bold text-white mt-1">' + (s.confidence || 0) + '%</div>' + getThreatBadge(s.threat_level) + '</div><div class="p-3 bg-gray-800/50 rounded-lg"><div class="text-xs text-gray-500 mb-1 font-medium">AI Analysis</div><p class="text-sm text-gray-300 leading-relaxed">' + (s.ai_reasoning || 'Analysis pending...') + '</p></div><div class="grid grid-cols-2 gap-2 text-xs"><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Node</div><div class="font-mono text-white">' + s.node_id + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Location</div><div class="font-mono text-white">' + (s.lat ? s.lat.toFixed(4) : '-') + ', ' + (s.lon ? s.lon.toFixed(4) : '-') + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">RSSI</div><div class="font-mono text-cyan-400">' + (s.rssi || '-') + ' dBm</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Time</div><div class="font-mono text-white">' + new Date(s.timestamp).toLocaleString() + '</div></div></div></div>';
+            const iconSvg = isChainsaw
+                ? '<svg class="w-8 h-8 text-red-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>'
+                : '<svg class="w-8 h-8 text-emerald-400 mx-auto" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2L6 10h3v4H6l6 8 6-8h-3v-4h3L12 2z"/></svg>';
+            analysis.innerHTML = '<div class="space-y-4"><div class="text-center p-4 rounded-lg ' + (isChainsaw ? 'bg-red-500/10 border border-red-500/30' : 'bg-emerald-500/10 border border-emerald-500/30') + '"><div class="mb-2">' + iconSvg + '</div><div class="text-lg font-bold ' + (isChainsaw ? 'text-red-400' : 'text-emerald-400') + '">' + (s.classification || 'Unknown').toUpperCase() + '</div><div class="text-3xl font-bold text-white mt-1">' + (s.confidence || 0) + '%</div>' + getThreatBadge(s.threat_level) + '</div><div class="p-3 bg-gray-800/50 rounded-lg"><div class="text-xs text-gray-500 mb-1 font-medium">AI Analysis</div><p class="text-sm text-gray-300 leading-relaxed">' + (s.ai_reasoning || 'Analysis pending...') + '</p></div><div class="grid grid-cols-2 gap-2 text-xs"><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Node</div><div class="font-mono text-white">' + s.node_id + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Location</div><div class="font-mono text-white">' + (s.lat ? s.lat.toFixed(4) : '-') + ', ' + (s.lon ? s.lon.toFixed(4) : '-') + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">RSSI</div><div class="font-mono text-cyan-400">' + (s.rssi || '-') + ' dBm</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Time</div><div class="font-mono text-white">' + new Date(s.timestamp).toLocaleString() + '</div></div></div></div>';
         }).catch(err => console.error('Error loading spectrogram:', err));
     }
 
@@ -353,7 +590,7 @@
             document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
             document.getElementById('ai-mode-select').value = data.mode;
             updateAiModeDesc(data.mode);
-        }).catch(() => {});
+        }).catch(() => { });
 
         fetch('/api/ai/status').then(r => r.json()).then(data => {
             const gpt4oStatus = document.getElementById('gpt4o-status');
@@ -372,7 +609,7 @@
                 cvStatus.innerHTML = '<span class="status-dot"></span>Not Configured';
                 cvStatus.className = 'status-badge offline';
             }
-        }).catch(() => {});
+        }).catch(() => { });
     }
 
     function updateAiModeDesc(mode) {
@@ -384,11 +621,11 @@
         document.getElementById('ai-mode-desc').textContent = desc[mode] || 'Select AI service';
     }
 
-    document.getElementById('ai-mode-select').addEventListener('change', function() {
+    document.getElementById('ai-mode-select').addEventListener('change', function () {
         updateAiModeDesc(this.value);
     });
 
-    document.getElementById('apply-ai-mode').addEventListener('click', function() {
+    document.getElementById('apply-ai-mode').addEventListener('click', function () {
         const btn = this;
         const mode = document.getElementById('ai-mode-select').value;
         btn.disabled = true;
@@ -420,10 +657,11 @@
     loadStats();
     loadSpectrograms();
     loadAiMode();
-    setInterval(loadStats, 10000);
+    updatePeriodDisplay();
+    setInterval(() => { loadStats(); updateLastUpdateTime(); }, 10000);
     setInterval(loadSpectrograms, 15000);
 
-    const socket = io();
+    // Socket.IO events (socket declared in app.js)
     socket.on('connect', () => {
         const badge = document.getElementById('connection-status');
         badge.innerHTML = '<span class="status-dot"></span>Live';
@@ -440,7 +678,7 @@
         loadStats();
         if (selectedSpectrogramId === data.spectrogram_id) showSpectrogram(data.spectrogram_id);
         if (data.classification === 'chainsaw' && data.confidence >= 70) {
-            alert('🚨 CHAINSAW DETECTED!\n\nNode: ' + data.node_id + '\nConfidence: ' + data.confidence + '%');
+            alert('⚠️ CHAINSAW DETECTED!\n\nNode: ' + data.node_id + '\nConfidence: ' + data.confidence + '%');
         }
     });
     socket.on('new_alert', (data) => loadStats());

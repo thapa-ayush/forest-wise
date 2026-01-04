@@ -349,12 +349,29 @@ class LoRaReceiver:
         
         return bytes(packet), rssi
     
+    def _reinit_lora(self):
+        """Reinitialize LoRa module after error"""
+        try:
+            logging.warning("[LoRa] Reinitializing module...")
+            self._reset()
+            time.sleep(0.1)
+            self._configure_lora()
+            self._start_receive()
+            logging.info("[LoRa] Reinitialization complete")
+            return True
+        except Exception as e:
+            logging.error(f"[LoRa] Reinitialization failed: {e}")
+            return False
+    
     def receive_loop(self):
         """Main receive loop (runs in thread)"""
         logging.info("LoRa receive loop started")
         
         if HARDWARE_ENABLED and self.spi:
             self._start_receive()
+        
+        error_count = 0
+        last_packet_time = time.time()
         
         while self.running:
             try:
@@ -364,6 +381,21 @@ class LoRaReceiver:
                     if result:
                         packet, rssi = result
                         self._process_packet(packet, rssi)
+                        error_count = 0  # Reset error count on success
+                        last_packet_time = time.time()
+                    
+                    # Check if LoRa might be stuck (no packets for 5 minutes)
+                    if time.time() - last_packet_time > 300:
+                        logging.warning("[LoRa] No packets received for 5 minutes, checking module...")
+                        # Verify module is responsive
+                        version = self._read_register(REG_VERSION)
+                        if version != 0x12:
+                            logging.error(f"[LoRa] Module not responding! Reinitializing...")
+                            self._reinit_lora()
+                        else:
+                            # Module OK, just restart receive mode
+                            self._start_receive()
+                        last_packet_time = time.time()  # Reset timer
                 else:
                     # No hardware - just wait, don't simulate
                     time.sleep(1)
@@ -371,8 +403,18 @@ class LoRaReceiver:
                 time.sleep(0.01)  # Small delay to prevent CPU spinning
                 
             except Exception as e:
+                error_count += 1
                 logging.error(f"Error in receive loop: {e}")
-                time.sleep(1)
+                
+                # If too many errors, try to reinitialize
+                if error_count >= 5:
+                    logging.error(f"[LoRa] Too many errors ({error_count}), attempting recovery...")
+                    if self._reinit_lora():
+                        error_count = 0
+                    else:
+                        time.sleep(5)  # Wait longer before retry
+                else:
+                    time.sleep(1)
         
         logging.info("LoRa receive loop stopped")
     

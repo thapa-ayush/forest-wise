@@ -1,26 +1,177 @@
 {% extends 'base.html' %}
 {% block content %}
-<h1 class="text-2xl font-bold mb-4">Nodes</h1>
-<table class="w-full text-left">
-    <thead>
-        <tr class="border-b border-gray-700">
-            <th class="py-2">Node ID</th>
-            <th>Last Seen</th>
-            <th>Battery</th>
-            <th>Location</th>
-            <th>Status</th>
-        </tr>
-    </thead>
-    <tbody>
-        {% for n in nodes %}
-        <tr class="border-b border-gray-800">
-            <td class="py-2">{{ n.node_id }}</td>
-            <td>{{ n.last_seen }}</td>
-            <td>{{ n.battery }}%</td>
-            <td>{{ n.lat }}, {{ n.lon }}</td>
-            <td>{{ n.status }}</td>
-        </tr>
-        {% endfor %}
-    </tbody>
-</table>
+<!-- Page Header -->
+<div class="flex items-center justify-between mb-6">
+    <div>
+        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
+            <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+            </svg>
+            Guardian Nodes
+        </h1>
+        <p class="text-gray-400 text-sm mt-1">Monitor your forest protection network</p>
+    </div>
+    <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-400">
+            <span id="online-count" class="text-emerald-400 font-bold">0</span> / <span id="total-count">0</span> online
+        </span>
+    </div>
+</div>
+
+<!-- Nodes Grid -->
+<div id="nodes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for n in nodes %}
+    <div class="card hover:border-gray-600 transition-colors">
+        <div class="p-5">
+            <!-- Node Header -->
+            <div class="flex items-start justify-between mb-4">
+                <div class="flex items-center gap-3">
+                    <div class="w-12 h-12 rounded-lg bg-emerald-500/20 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-white">{{ n.node_id }}</h3>
+                        <span class="text-xs text-gray-500">{{ n.hardware or 'ESP32-S3' }}</span>
+                    </div>
+                </div>
+                {% if n.status == 'online' %}
+                <span class="status-badge online">
+                    <span class="status-dot"></span>
+                    Online
+                </span>
+                {% else %}
+                <span class="status-badge offline">
+                    <span class="status-dot"></span>
+                    Offline
+                </span>
+                {% endif %}
+            </div>
+
+            <!-- Node Stats -->
+            <div class="space-y-3">
+                <!-- Battery -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-gray-400 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            {% if n.battery > 80 %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-1m2-4h2m-2-4h2m-2 8h2" />
+                            <rect x="4" y="8" width="12" height="8" fill="currentColor" opacity="0.3" />
+                            {% elif n.battery > 50 %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-1m2-4h2m-2-4h2m-2 8h2" />
+                            <rect x="4" y="8" width="8" height="8" fill="currentColor" opacity="0.3" />
+                            {% elif n.battery > 20 %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-1m2-4h2m-2-4h2m-2 8h2" />
+                            <rect x="4" y="8" width="4" height="8" fill="currentColor" opacity="0.3" />
+                            {% else %}
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 8V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-1m2-4h2m-2-4h2m-2 8h2" />
+                            {% endif %}
+                        </svg>
+                        Battery
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-20 h-2 bg-gray-700 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full {% if n.battery > 50 %}bg-emerald-500{% elif n.battery > 20 %}bg-yellow-500{% else %}bg-red-500{% endif %}"
+                                style="width: {{ n.battery }}%"></div>
+                        </div>
+                        <span
+                            class="text-sm font-mono {% if n.battery > 50 %}text-emerald-400{% elif n.battery > 20 %}text-yellow-400{% else %}text-red-400{% endif %}">{{
+                            n.battery }}%</span>
+                    </div>
+                </div>
+
+                <!-- Location -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-gray-400 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        Location
+                    </div>
+                    <span class="text-sm font-mono text-white">{{ "%.4f"|format(n.lat) }}, {{ "%.4f"|format(n.lon)
+                        }}</span>
+                </div>
+
+                <!-- Last Seen -->
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-gray-400 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Last Seen
+                    </div>
+                    <span class="text-sm text-gray-300">{{ n.last_seen }}</span>
+                </div>
+
+                <!-- RSSI (if available) -->
+                {% if n.rssi %}
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2 text-gray-400 text-sm">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0" />
+                        </svg>
+                        Signal
+                    </div>
+                    <span class="text-sm font-mono text-cyan-400">{{ n.rssi }} dBm</span>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Actions -->
+            <div class="mt-4 pt-4 border-t border-gray-800 flex gap-2">
+                <button onclick="locateNode('{{ n.node_id }}', {{ n.lat }}, {{ n.lon }})"
+                    class="btn btn-secondary flex-1 text-sm">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
+                    </svg>
+                    View on Map
+                </button>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% if not nodes %}
+<div class="text-center py-16 text-gray-500">
+    <svg class="w-16 h-16 mx-auto mb-4 opacity-30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
+    </svg>
+    <p class="text-lg font-medium">No nodes registered</p>
+    <p class="text-sm mt-1">Nodes will appear here once they connect to the hub</p>
+</div>
+{% endif %}
+
+<script>
+    function locateNode(nodeId, lat, lon) {
+        window.location.href = `/map?node=${nodeId}&lat=${lat}&lon=${lon}`;
+    }
+
+    // Update counts
+    document.addEventListener('DOMContentLoaded', () => {
+        const nodes = document.querySelectorAll('.card');
+        const onlineNodes = document.querySelectorAll('.status-badge.online');
+        document.getElementById('total-count').textContent = nodes.length;
+        document.getElementById('online-count').textContent = onlineNodes.length;
+    });
+
+    // Real-time updates (socket declared in app.js)
+    socket.on('node_update', () => {
+        location.reload();
+    });
+</script>
 {% endblock %}
