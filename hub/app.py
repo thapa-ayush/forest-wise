@@ -29,7 +29,7 @@ app.config.from_object(Config)
 CORS(app)
 csrf = CSRFProtect(app)
 csrf.exempt(auth_bp)  # Exempt auth routes from CSRF for simpler login
-socketio = SocketIO(app, cors_allowed_origins="*")
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode='gevent')
 login_manager.init_app(app)
 limiter.init_app(app)
 app.register_blueprint(auth_bp)
@@ -596,11 +596,8 @@ def start_lora_receiver():
         logging.error(f"Failed to start LoRa subsystem: {e}")
 
 
-# Start LoRa receiver when app starts
-start_lora_receiver()
-
-
 if __name__ == '__main__':
-    # Debug=False to prevent reloader stealing GPIO from first process
-    # allow_unsafe_werkzeug=True for development (use gunicorn for production)
-    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)
+    # Start LoRa receiver only when running directly (not on import)
+    start_lora_receiver()
+    # Use standard Flask (SocketIO has issues with lgpio on Pi 5)
+    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)

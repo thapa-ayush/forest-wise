@@ -1,0 +1,309 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-4">
+        <div>
+            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
+                <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Alert History
+            </h1>
+            <p class="text-gray-400 text-sm mt-1">View and manage historical alerts by date</p>
+        </div>
+        <a href="/alerts" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">
+            ← Back to Live Alerts
+        </a>
+    </div>
+
+    <!-- Controls Bar -->
+    <div class="bg-gray-800 rounded-xl p-4 flex flex-wrap items-center gap-4">
+        <!-- Date Picker -->
+        <div class="flex items-center gap-2">
+            <label class="text-gray-400 text-sm">Select Date:</label>
+            <input type="date" id="datePicker" value="{{ selected_date }}"
+                class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:border-transparent">
+        </div>
+
+        <!-- Quick Date Buttons -->
+        <div class="flex gap-2">
+            <button onclick="setDate('today')"
+                class="px-3 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white text-sm transition">Today</button>
+            <button onclick="setDate('yesterday')"
+                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">Yesterday</button>
+            <button onclick="setDate('week')"
+                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">Last 7
+                Days</button>
+        </div>
+
+        <!-- Clear Options -->
+        <div class="ml-auto flex gap-2">
+            <button onclick="clearAlerts('responded')"
+                class="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-white text-sm transition">
+                Clear Responded
+            </button>
+            <button onclick="clearAlerts('date')"
+                class="px-3 py-2 bg-orange-600 hover:bg-orange-500 rounded-lg text-white text-sm transition">
+                Clear This Day
+            </button>
+            <button onclick="clearAlerts('all')"
+                class="px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm transition">
+                Clear All
+            </button>
+        </div>
+    </div>
+
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="statsCards">
+        <div class="bg-gray-800 rounded-xl p-4">
+            <div class="text-gray-400 text-sm">Total Alerts</div>
+            <div class="text-3xl font-bold text-white" id="statTotal">--</div>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+            <div class="text-gray-400 text-sm">Chainsaw Detections</div>
+            <div class="text-3xl font-bold text-red-500" id="statChainsaw">--</div>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+            <div class="text-gray-400 text-sm">Responded</div>
+            <div class="text-3xl font-bold text-green-500" id="statResponded">--</div>
+        </div>
+        <div class="bg-gray-800 rounded-xl p-4">
+            <div class="text-gray-400 text-sm">Avg Confidence</div>
+            <div class="text-3xl font-bold text-blue-500" id="statConfidence">--%</div>
+        </div>
+    </div>
+
+    <!-- Available Dates Sidebar + Alerts Table -->
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <!-- Dates with Alerts -->
+        <div class="bg-gray-800 rounded-xl p-4">
+            <h3 class="text-white font-semibold mb-3">📅 Dates with Alerts</h3>
+            <div class="space-y-2 max-h-96 overflow-y-auto" id="datesList">
+                <div class="text-gray-500 text-sm">Loading...</div>
+            </div>
+        </div>
+
+        <!-- Alerts Table -->
+        <div class="lg:col-span-3 bg-gray-800 rounded-xl p-4">
+            <h3 class="text-white font-semibold mb-3">
+                🚨 Alerts for <span id="currentDate" class="text-green-400">{{ selected_date }}</span>
+            </h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left text-sm">
+                    <thead>
+                        <tr class="border-b border-gray-700 text-gray-400">
+                            <th class="py-3 px-2">ID</th>
+                            <th class="px-2">Node</th>
+                            <th class="px-2">Classification</th>
+                            <th class="px-2">Confidence</th>
+                            <th class="px-2">Location</th>
+                            <th class="px-2">Time</th>
+                            <th class="px-2">Status</th>
+                            <th class="px-2">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="alertsTable">
+                        <tr>
+                            <td colspan="8" class="py-8 text-center text-gray-500">Loading alerts...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div id="noAlerts" class="hidden py-12 text-center">
+                <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <p class="text-gray-400">No alerts for this date</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Confirmation Modal -->
+<div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-md mx-4">
+        <h3 class="text-xl font-bold text-white mb-4">⚠️ Confirm Clear</h3>
+        <p class="text-gray-300 mb-6" id="confirmMessage">Are you sure you want to clear these alerts?</p>
+        <div class="flex gap-3 justify-end">
+            <button onclick="closeModal()"
+                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition">Cancel</button>
+            <button id="confirmBtn"
+                class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white transition">Confirm</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let currentDate = '{{ selected_date }}';
+
+    // Load data on page load
+    document.addEventListener('DOMContentLoaded', () => {
+        loadAlertHistory(currentDate);
+    });
+
+    // Date picker change
+    document.getElementById('datePicker').addEventListener('change', (e) => {
+        currentDate = e.target.value;
+        loadAlertHistory(currentDate);
+    });
+
+    function setDate(type) {
+        const today = new Date();
+        if (type === 'today') {
+            currentDate = today.toISOString().split('T')[0];
+        } else if (type === 'yesterday') {
+            today.setDate(today.getDate() - 1);
+            currentDate = today.toISOString().split('T')[0];
+        }
+        document.getElementById('datePicker').value = currentDate;
+        loadAlertHistory(currentDate);
+    }
+
+    async function loadAlertHistory(date) {
+        try {
+            const res = await fetch(`/api/alerts/history?date=${date}`);
+            const data = await res.json();
+
+            // Update stats
+            document.getElementById('statTotal').textContent = data.stats.total_alerts || 0;
+            document.getElementById('statChainsaw').textContent = data.stats.chainsaw_count || 0;
+            document.getElementById('statResponded').textContent = data.stats.responded_count || 0;
+            document.getElementById('statConfidence').textContent =
+                data.stats.avg_confidence ? Math.round(data.stats.avg_confidence) + '%' : '--';
+            document.getElementById('currentDate').textContent = date;
+
+            // Update available dates
+            const datesList = document.getElementById('datesList');
+            if (data.available_dates.length > 0) {
+                datesList.innerHTML = data.available_dates.map(d => `
+                <button onclick="selectDate('${d.alert_date}')" 
+                        class="w-full text-left px-3 py-2 rounded-lg text-sm transition
+                               ${d.alert_date === date ? 'bg-green-600 text-white' : 'bg-gray-700 text-gray-300 hover:bg-gray-600'}">
+                    ${d.alert_date} <span class="float-right text-xs opacity-75">${d.count} alerts</span>
+                </button>
+            `).join('');
+            } else {
+                datesList.innerHTML = '<p class="text-gray-500 text-sm">No historical alerts</p>';
+            }
+
+            // Update alerts table
+            const table = document.getElementById('alertsTable');
+            const noAlerts = document.getElementById('noAlerts');
+
+            if (data.alerts.length > 0) {
+                noAlerts.classList.add('hidden');
+                table.parentElement.classList.remove('hidden');
+                table.innerHTML = data.alerts.map(a => `
+                <tr class="border-b border-gray-700 hover:bg-gray-750">
+                    <td class="py-3 px-2 text-gray-400">#${a.id}</td>
+                    <td class="px-2 font-mono text-green-400">${a.node_id || 'Unknown'}</td>
+                    <td class="px-2">
+                        <span class="px-2 py-1 rounded text-xs font-semibold
+                            ${a.ai_classification === 'chainsaw' ? 'bg-red-600 text-white' :
+                        a.ai_classification === 'vehicle' ? 'bg-yellow-600 text-white' :
+                            'bg-gray-600 text-gray-200'}">
+                            ${a.ai_classification || 'pending'}
+                        </span>
+                    </td>
+                    <td class="px-2 text-white">${a.confidence || a.ai_confidence || '--'}%</td>
+                    <td class="px-2 text-gray-400 text-xs">${formatLocation(a.lat, a.lon)}</td>
+                    <td class="px-2 text-gray-400 text-xs">${formatTime(a.timestamp)}</td>
+                    <td class="px-2">
+                        ${a.responded ?
+                        '<span class="text-green-400">✓ Responded</span>' :
+                        '<span class="text-yellow-400">Pending</span>'}
+                    </td>
+                    <td class="px-2">
+                        ${!a.responded ? `
+                            <button onclick="respondAlert(${a.id})" 
+                                    class="px-2 py-1 bg-green-600 hover:bg-green-500 rounded text-xs text-white transition">
+                                Respond
+                            </button>
+                        ` : ''}
+                    </td>
+                </tr>
+            `).join('');
+            } else {
+                table.innerHTML = '';
+                noAlerts.classList.remove('hidden');
+            }
+        } catch (err) {
+            console.error('Error loading history:', err);
+        }
+    }
+
+    function selectDate(date) {
+        currentDate = date;
+        document.getElementById('datePicker').value = date;
+        loadAlertHistory(date);
+    }
+
+    function formatLocation(lat, lon) {
+        if (!lat || !lon || (lat == 0 && lon == 0)) return 'No GPS';
+        return `${parseFloat(lat).toFixed(4)}, ${parseFloat(lon).toFixed(4)}`;
+    }
+
+    function formatTime(timestamp) {
+        if (!timestamp) return '--';
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+
+    async function respondAlert(alertId) {
+        try {
+            await fetch(`/api/alerts/${alertId}/respond`, { method: 'POST' });
+            loadAlertHistory(currentDate);
+        } catch (err) {
+            console.error('Error responding:', err);
+        }
+    }
+
+    let pendingClearType = null;
+
+    function clearAlerts(type) {
+        pendingClearType = type;
+        const messages = {
+            'all': 'This will permanently delete ALL alerts. This cannot be undone!',
+            'date': `This will delete all alerts for ${currentDate}.`,
+            'responded': 'This will delete all alerts that have been responded to.'
+        };
+        document.getElementById('confirmMessage').textContent = messages[type];
+        document.getElementById('confirmModal').classList.remove('hidden');
+        document.getElementById('confirmModal').classList.add('flex');
+    }
+
+    function closeModal() {
+        document.getElementById('confirmModal').classList.add('hidden');
+        document.getElementById('confirmModal').classList.remove('flex');
+        pendingClearType = null;
+    }
+
+    document.getElementById('confirmBtn').addEventListener('click', async () => {
+        if (!pendingClearType) return;
+
+        try {
+            const res = await fetch('/api/alerts/clear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    type: pendingClearType,
+                    date: currentDate
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                closeModal();
+                loadAlertHistory(currentDate);
+            } else {
+                alert('Error: ' + data.error);
+            }
+        } catch (err) {
+            console.error('Error clearing:', err);
+            alert('Failed to clear alerts');
+        }
+    });
+</script>
+{% endblock %}
