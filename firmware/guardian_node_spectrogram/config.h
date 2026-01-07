@@ -62,7 +62,7 @@
 // ============================================
 #define BATTERY_PIN 1      // ADC1 CH0 for battery voltage
 #define VEXT_CTRL 36       // Vext power control (active LOW)
-#define BATTERY_FACTOR 4.9 // Voltage divider factor
+#define BATTERY_FACTOR 2.0 // Voltage divider factor
 #define BATTERY_FULL 4.2f  // Full charge voltage
 #define BATTERY_EMPTY 3.2f // Empty voltage
 

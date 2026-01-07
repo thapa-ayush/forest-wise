@@ -239,10 +239,10 @@
                 <span class="text-gray-400 text-sm">Current Mode</span>
                 <span id="current-ai-mode" class="font-bold text-emerald-400">-</span>
             </div>
-            <select id="ai-mode-select" class="w-full">
-                <option value="gpt4o">● GPT-4o Vision (Detailed)</option>
-                <option value="custom_vision">● Custom Vision (Fast)</option>
-                <option value="auto">● Auto (CV + GPT-4o verify)</option>
+            <select id="ai-mode-select" class="w-full" style="padding-left: 1rem;">
+                <option value="gpt4o">GPT-4o Vision (Detailed)</option>
+                <option value="custom_vision">Custom Vision (Fast)</option>
+                <option value="auto">Auto (CV + GPT-4o verify)</option>
             </select>
             <button id="apply-ai-mode" class="btn btn-primary w-full">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -629,7 +629,7 @@
 
     function loadAiMode() {
         fetch('/api/ai/mode').then(r => r.json()).then(data => {
-            document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+            document.getElementById('current-ai-mode').textContent = getModeLabel(data.mode);
             document.getElementById('ai-mode-select').value = data.mode;
             updateAiModeDesc(data.mode);
         }).catch(() => { });
@@ -663,6 +663,15 @@
         document.getElementById('ai-mode-desc').textContent = desc[mode] || 'Select AI service';
     }
 
+    function getModeLabel(mode) {
+        const labels = {
+            'gpt4o': 'GPT-4o Vision',
+            'custom_vision': 'Custom Vision',
+            'auto': 'Auto (Hybrid)'
+        };
+        return labels[mode] || mode;
+    }
+
     document.getElementById('ai-mode-select').addEventListener('change', function () {
         updateAiModeDesc(this.value);
     });
@@ -690,7 +699,7 @@
             btn.disabled = false;
             if (data.success) {
                 btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Applied!';
-                document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+                document.getElementById('current-ai-mode').textContent = getModeLabel(data.mode);
                 setTimeout(() => {
                     btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Apply Changes';
                 }, 2000);
@@ -747,7 +756,7 @@
     socket.on('new_alert', (data) => loadStats());
     socket.on('node_update', (data) => loadStats());
     socket.on('ai_mode_changed', (data) => {
-        document.getElementById('current-ai-mode').textContent = data.mode.toUpperCase();
+        document.getElementById('current-ai-mode').textContent = getModeLabel(data.mode);
         document.getElementById('ai-mode-select').value = data.mode;
         updateAiModeDesc(data.mode);
     });
