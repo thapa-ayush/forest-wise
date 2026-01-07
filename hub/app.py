@@ -318,11 +318,33 @@ def api_health():
 @app.route('/api/spectrograms')
 @login_required
 def api_spectrograms():
-    """Get list of recent spectrograms"""
-    spectrograms = query_db('''
-        SELECT * FROM spectrograms 
-        ORDER BY timestamp DESC LIMIT 50
-    ''')
+    """Get list of recent spectrograms with optional date filtering"""
+    date = request.args.get('date')  # YYYY-MM-DD
+    month = request.args.get('month')  # YYYY-MM
+    year = request.args.get('year')  # YYYY
+    
+    query = 'SELECT * FROM spectrograms'
+    params = []
+    
+    if date:
+        # Filter by specific date
+        query += ' WHERE DATE(timestamp) = ?'
+        params.append(date)
+    elif month:
+        # Filter by month (YYYY-MM format)
+        query += ' WHERE strftime("%Y-%m", timestamp) = ?'
+        params.append(month)
+    elif year:
+        # Filter by year
+        query += ' WHERE strftime("%Y", timestamp) = ?'
+        params.append(year)
+    else:
+        # Default: today's spectrograms
+        query += ' WHERE DATE(timestamp) = DATE("now")'
+    
+    query += ' ORDER BY timestamp DESC LIMIT 50'
+    
+    spectrograms = query_db(query, params)
     return jsonify([dict(s) for s in spectrograms] if spectrograms else [])
 
 
@@ -897,5 +919,6 @@ def start_lora_receiver():
 if __name__ == '__main__':
     # Start LoRa receiver only when running directly (not on import)
     start_lora_receiver()
-    # Use standard Flask (SocketIO has issues with lgpio on Pi 5)
-    app.run(host='0.0.0.0', port=5000, debug=False, threaded=True)
+    # Use socketio.run() with allow_unsafe_werkzeug for proper Socket.IO support
+    # This enables real-time event delivery to clients
+    socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

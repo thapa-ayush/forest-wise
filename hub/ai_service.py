@@ -509,9 +509,9 @@ def analyze_alert(alert: dict, spectrogram_result: Optional[dict] = None) -> str
     Returns:
         Analysis text
     """
-    init_azure_client()
+    init_azure_openai()
     
-    if client is None:
+    if openai_client is None:
         return "Unable to analyze: Azure AI service unavailable"
     
     # Build context with spectrogram results if available
@@ -536,7 +536,7 @@ def analyze_alert(alert: dict, spectrogram_result: Optional[dict] = None) -> str
     Consider both the anomaly detection and AI vision classification."""
     
     try:
-        response = client.chat.completions.create(
+        response = openai_client.chat.completions.create(
             model=Config.AZURE_OPENAI_DEPLOYMENT,
             messages=[
                 {"role": "system", "content": "You are a concise forest monitoring assistant."},
@@ -565,9 +565,9 @@ def generate_daily_report(alerts: list, spectrogram_analyses: list = None) -> st
     Returns:
         Report text
     """
-    init_azure_client()
+    init_azure_openai()
     
-    if client is None:
+    if openai_client is None:
         return "Unable to generate report: Azure AI service unavailable"
     
     # Summarize spectrogram analyses
@@ -601,7 +601,7 @@ def generate_daily_report(alerts: list, spectrogram_analyses: list = None) -> st
     5. Equipment status concerns"""
     
     try:
-        response = client.chat.completions.create(
+        response = openai_client.chat.completions.create(
             model=Config.AZURE_OPENAI_DEPLOYMENT,
             messages=[
                 {"role": "system", "content": "You are a forest protection analyst. Create concise, actionable reports."},

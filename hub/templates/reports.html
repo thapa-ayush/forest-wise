@@ -12,195 +12,349 @@
         </h1>
         <p class="text-gray-400 text-sm mt-1">AI-generated analysis and insights</p>
     </div>
-    <button id="refresh-report" class="btn btn-secondary flex items-center gap-2">
+    <button id="refresh-report" class="btn btn-primary flex items-center gap-2">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        Refresh
+        Generate New Report
     </button>
 </div>
 
-<!-- Report Cards Grid -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-    <!-- Daily Summary -->
-    <div class="card">
-        <div class="card-header border-b border-gray-800 p-4">
-            <div class="flex items-center justify-between">
-                <h2 class="card-title flex items-center gap-2">
-                    <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
-                    </svg>
-                    Daily Summary
-                </h2>
-                <span class="text-xs text-gray-500" id="daily-time">Last 24 hours</span>
-            </div>
-        </div>
-        <div class="p-4">
-            <div id="daily-report-content" class="prose prose-invert prose-sm max-w-none">
-                <div class="flex items-center justify-center py-8">
-                    <div class="animate-spin w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full">
-                    </div>
-                    <span class="ml-3 text-gray-400">Generating report...</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Statistics Card -->
-    <div class="card">
-        <div class="card-header border-b border-gray-800 p-4">
-            <h2 class="card-title flex items-center gap-2">
-                <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<!-- Stats Row -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+    <!-- Total Alerts -->
+    <div class="card p-4 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
-                Statistics Overview
-            </h2>
-        </div>
-        <div class="p-4">
-            <div class="grid grid-cols-2 gap-4">
-                <!-- Total Alerts -->
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                        </svg>
-                        Alerts Today
-                    </div>
-                    <div id="alerts-today" class="text-3xl font-bold text-red-400">-</div>
-                </div>
-
-                <!-- Spectrograms Analyzed -->
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                        </svg>
-                        Spectrograms
-                    </div>
-                    <div id="specs-today" class="text-3xl font-bold text-purple-400">-</div>
-                </div>
-
-                <!-- Chainsaw Detections -->
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        Chainsaws
-                    </div>
-                    <div id="chainsaw-count" class="text-3xl font-bold text-orange-400">-</div>
-                </div>
-
-                <!-- Active Nodes -->
-                <div class="bg-gray-800/50 rounded-lg p-4">
-                    <div class="flex items-center gap-2 text-gray-400 text-sm mb-2">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
-                        </svg>
-                        Active Nodes
-                    </div>
-                    <div id="node-count" class="text-3xl font-bold text-emerald-400">-</div>
-                </div>
+            </div>
+            <div>
+                <div id="alerts-today" class="text-2xl font-bold text-white">-</div>
+                <div class="text-xs text-gray-400">Alerts Today</div>
             </div>
         </div>
     </div>
 
-    <!-- Weekly Trend -->
-    <div class="card lg:col-span-2">
-        <div class="card-header border-b border-gray-800 p-4">
-            <h2 class="card-title flex items-center gap-2">
+    <!-- Spectrograms -->
+    <div class="card p-4 bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
+                </svg>
+            </div>
+            <div>
+                <div id="specs-today" class="text-2xl font-bold text-white">-</div>
+                <div class="text-xs text-gray-400">Spectrograms</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chainsaws -->
+    <div class="card p-4 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
+                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div>
+                <div id="chainsaw-count" class="text-2xl font-bold text-white">-</div>
+                <div class="text-xs text-gray-400">Chainsaws</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Nodes -->
+    <div class="card p-4 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                 <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                        d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
-                Weekly Activity
-            </h2>
+            </div>
+            <div>
+                <div id="node-count" class="text-2xl font-bold text-white">-</div>
+                <div class="text-xs text-gray-400">Active Nodes</div>
+            </div>
         </div>
-        <div class="p-4">
-            <div id="weekly-chart" class="h-48">
-                <div class="flex items-end justify-between h-full gap-2">
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-0" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
+    </div>
+</div>
+
+<!-- Main Content Grid -->
+<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+    <!-- Daily Report - Takes 2 columns -->
+    <div class="xl:col-span-2">
+        <div class="card h-full">
+            <div class="card-header border-b border-gray-800 p-4">
+                <div class="flex items-center justify-between">
+                    <h2 class="card-title flex items-center gap-2">
+                        <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Daily Intelligence Report
+                    </h2>
+                    <span class="text-xs px-2 py-1 rounded-full bg-amber-500/20 text-amber-400">Last 24 hours</span>
+                </div>
+            </div>
+            <div class="p-5 overflow-y-auto max-h-[600px] custom-scroll">
+                <div id="daily-report-content">
+                    <div class="flex flex-col items-center justify-center py-12">
+                        <div
+                            class="animate-spin w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full mb-4">
                         </div>
-                        <span class="text-xs text-gray-500 mt-2">Mon</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-1" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Tue</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-2" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Wed</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-3" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Thu</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-4" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Fri</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-5" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Sat</span>
-                    </div>
-                    <div class="flex-1 flex flex-col items-center">
-                        <div id="bar-6" class="w-full bg-emerald-500/30 rounded-t transition-all" style="height: 0%">
-                        </div>
-                        <span class="text-xs text-gray-500 mt-2">Sun</span>
+                        <span class="text-gray-400">Generating AI report...</span>
                     </div>
                 </div>
             </div>
-            <p class="text-center text-xs text-gray-500 mt-4">Alert activity over the past 7 days</p>
+        </div>
+    </div>
+
+    <!-- Weekly Activity Chart -->
+    <div class="xl:col-span-1">
+        <div class="card h-full">
+            <div class="card-header border-b border-gray-800 p-4">
+                <h2 class="card-title flex items-center gap-2">
+                    <svg class="w-5 h-5 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                    </svg>
+                    Weekly Trend
+                </h2>
+            </div>
+            <div class="p-4">
+                <div id="weekly-chart" class="h-40">
+                    <div class="flex items-end justify-between h-full gap-3 px-2">
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-0" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Mon</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-1" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Tue</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-2" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Wed</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-3" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Thu</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-4" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Fri</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-5" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Sat</span>
+                        </div>
+                        <div class="flex-1 flex flex-col items-center h-full">
+                            <div class="flex-1 w-full flex items-end">
+                                <div id="bar-6" class="w-full rounded-t transition-all duration-500 min-h-[4px]"
+                                    style="height: 0%; background: linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3));">
+                                </div>
+                            </div>
+                            <span class="text-xs text-gray-500 mt-2 font-medium">Sun</span>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-center text-xs text-gray-500 mt-3">Alert activity over the past 7 days</p>
+
+                <!-- Quick Summary -->
+                <div class="mt-6 pt-4 border-t border-gray-800">
+                    <div class="text-sm text-gray-400 mb-3">Quick Summary</div>
+                    <div class="space-y-2">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Peak Day</span>
+                            <span id="peak-day" class="text-xs text-emerald-400 font-medium">-</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Total This Week</span>
+                            <span id="week-total" class="text-xs text-white font-medium">-</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">Daily Average</span>
+                            <span id="daily-avg" class="text-xs text-gray-300 font-medium">-</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
 <script>
+    // Convert markdown to styled HTML
+    function formatReport(text) {
+        if (!text) return '';
+
+        // Split into lines for processing
+        let lines = text.split('\n');
+        let html = '';
+        let inList = false;
+
+        lines.forEach(line => {
+            line = line.trim();
+            if (!line) {
+                if (inList) {
+                    html += '</ul>';
+                    inList = false;
+                }
+                html += '<div class="h-3"></div>';
+                return;
+            }
+
+            // Main title (### )
+            if (line.startsWith('### ')) {
+                if (inList) { html += '</ul>'; inList = false; }
+                const title = line.replace('### ', '').replace(/\*\*/g, '');
+                html += `<div class="flex items-center gap-3 mb-4 pb-3 border-b border-gray-700">
+                    <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-semibold text-white">${title}</h3>
+                </div>`;
+                return;
+            }
+
+            // Section headers (#### )
+            if (line.startsWith('#### ')) {
+                if (inList) { html += '</ul>'; inList = false; }
+                const num = line.match(/\d+/)?.[0] || '';
+                const title = line.replace(/####\s*\d*\.?\s*/, '').replace(/\*\*/g, '').replace(/\(.*?\)/, m => `<span class="text-gray-500 text-sm font-normal">${m}</span>`);
+                const colors = ['from-emerald-500 to-teal-600', 'from-red-500 to-rose-600', 'from-blue-500 to-indigo-600', 'from-purple-500 to-violet-600', 'from-orange-500 to-amber-600'];
+                const color = colors[(parseInt(num) - 1) % colors.length] || colors[0];
+                html += `<div class="mt-5 mb-3">
+                    <div class="flex items-center gap-2">
+                        ${num ? `<span class="w-6 h-6 rounded-full bg-gradient-to-br ${color} flex items-center justify-center text-xs font-bold text-white">${num}</span>` : ''}
+                        <h4 class="text-base font-semibold text-white">${title}</h4>
+                    </div>
+                </div>`;
+                return;
+            }
+
+            // Bullet points
+            if (line.startsWith('- ') || line.startsWith('• ') || line.startsWith('* ')) {
+                if (!inList) {
+                    html += '<ul class="space-y-2 ml-2">';
+                    inList = true;
+                }
+                let content = line.replace(/^[-•*]\s*/, '');
+                // Bold text
+                content = content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+                // Highlight numbers
+                content = content.replace(/(\d+(?:\.\d+)?%?)/g, '<span class="text-emerald-400 font-medium">$1</span>');
+                // Highlight coordinates
+                content = content.replace(/(Latitude|Longitude|Lat|Lon|RSSI)[\s:]+([0-9.-]+)/gi, '<span class="text-cyan-400">$1: $2</span>');
+                // Highlight times
+                content = content.replace(/(\d{1,2}:\d{2}\s*(?:AM|PM)?)/gi, '<span class="text-amber-400">$1</span>');
+
+                html += `<li class="flex items-start gap-2 text-gray-300 text-sm leading-relaxed">
+                    <span class="text-emerald-400 mt-1">●</span>
+                    <span>${content}</span>
+                </li>`;
+                return;
+            }
+
+            // Regular paragraph
+            if (inList) { html += '</ul>'; inList = false; }
+            let content = line;
+            content = content.replace(/\*\*(.*?)\*\*/g, '<strong class="text-white font-semibold">$1</strong>');
+            content = content.replace(/(\d+(?:\.\d+)?%)/g, '<span class="text-emerald-400 font-medium">$1</span>');
+            html += `<p class="text-gray-300 text-sm leading-relaxed mb-2">${content}</p>`;
+        });
+
+        if (inList) html += '</ul>';
+        return html;
+    }
+
     function loadDailyReport() {
         const content = document.getElementById('daily-report-content');
+        content.innerHTML = `
+            <div class="flex flex-col items-center justify-center py-12">
+                <div class="animate-spin w-8 h-8 border-3 border-emerald-500 border-t-transparent rounded-full mb-4"></div>
+                <span class="text-gray-400">Generating AI report...</span>
+            </div>
+        `;
 
         fetch('/api/reports/daily')
             .then(r => r.json())
             .then(data => {
-                if (data.report) {
-                    // Format the report with better styling
-                    const formatted = data.report
-                        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-white">$1</strong>')
-                        .replace(/\n/g, '<br>')
-                        .replace(/- /g, '<span class="text-emerald-400 mr-2">•</span>');
-                    content.innerHTML = `<div class="text-gray-300 leading-relaxed">${formatted}</div>`;
+                if (data.report && !data.report.includes('unavailable') && !data.report.includes('Unable to')) {
+                    content.innerHTML = formatReport(data.report);
+                } else if (data.report) {
+                    // Service unavailable message
+                    content.innerHTML = `
+                        <div class="text-center py-8">
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                                <svg class="w-8 h-8 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                                </svg>
+                            </div>
+                            <p class="text-yellow-400 font-medium mb-2">AI Service Unavailable</p>
+                            <p class="text-gray-500 text-sm">${data.report}</p>
+                            <p class="text-gray-600 text-xs mt-3">Configure Azure OpenAI in settings to enable reports</p>
+                        </div>
+                    `;
                 } else {
                     content.innerHTML = `
                         <div class="text-center py-8 text-gray-500">
-                            <svg class="w-12 h-12 mx-auto mb-3 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                            </svg>
-                            <p>No report data available</p>
-                            <p class="text-sm mt-1">Reports are generated from alert activity</p>
+                            <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-800 flex items-center justify-center">
+                                <svg class="w-8 h-8 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                                </svg>
+                            </div>
+                            <p class="font-medium mb-1">No Report Data</p>
+                            <p class="text-sm">Reports are generated from alert activity</p>
                         </div>
                     `;
                 }
             })
             .catch(err => {
                 content.innerHTML = `
-                    <div class="text-center py-8 text-red-400">
-                        <svg class="w-12 h-12 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                        <p>Failed to load report</p>
+                    <div class="text-center py-8">
+                        <div class="w-16 h-16 mx-auto mb-4 rounded-full bg-red-500/20 flex items-center justify-center">
+                            <svg class="w-8 h-8 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <p class="text-red-400 font-medium mb-2">Failed to Load Report</p>
+                        <p class="text-gray-500 text-sm">Please try again later</p>
                     </div>
                 `;
             });
@@ -221,12 +375,9 @@
         fetch('/api/alerts')
             .then(r => r.json())
             .then(data => {
-                // Count alerts from today
                 const today = new Date().toDateString();
                 const todayAlerts = data.filter(a => new Date(a.timestamp).toDateString() === today).length;
                 document.getElementById('alerts-today').textContent = todayAlerts;
-
-                // Update weekly chart
                 updateWeeklyChart(data);
             })
             .catch(() => {
@@ -244,49 +395,62 @@
     }
 
     function updateWeeklyChart(alerts) {
-        // Calculate alerts per day for the past week
         const days = [0, 0, 0, 0, 0, 0, 0];
+        const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
         const now = new Date();
 
         alerts.forEach(alert => {
             const alertDate = new Date(alert.timestamp);
             const diffDays = Math.floor((now - alertDate) / (1000 * 60 * 60 * 24));
             if (diffDays >= 0 && diffDays < 7) {
-                const dayIndex = (alertDate.getDay() + 6) % 7; // Monday = 0
+                const dayIndex = (alertDate.getDay() + 6) % 7;
                 days[dayIndex]++;
             }
         });
 
         const maxValue = Math.max(...days, 1);
+        const total = days.reduce((a, b) => a + b, 0);
+        const peakIndex = days.indexOf(Math.max(...days));
 
         for (let i = 0; i < 7; i++) {
             const bar = document.getElementById(`bar-${i}`);
-            const height = (days[i] / maxValue) * 100;
+            const height = Math.max((days[i] / maxValue) * 100, days[i] > 0 ? 10 : 0);
             bar.style.height = height + '%';
-            bar.style.backgroundColor = days[i] > 0 ? 'rgba(16, 185, 129, 0.5)' : 'rgba(16, 185, 129, 0.2)';
-            bar.title = `${days[i]} alerts`;
+            bar.title = `${days[i]} alert${days[i] !== 1 ? 's' : ''}`;
+
+            if (days[i] > 0) {
+                bar.classList.add('cursor-pointer');
+                bar.style.background = i === peakIndex
+                    ? 'linear-gradient(to top, rgba(239, 68, 68, 0.6), rgba(239, 68, 68, 0.3))'
+                    : 'linear-gradient(to top, rgba(16, 185, 129, 0.5), rgba(16, 185, 129, 0.3))';
+            }
         }
+
+        // Update summary
+        document.getElementById('peak-day').textContent = total > 0 ? dayNames[peakIndex] : '-';
+        document.getElementById('week-total').textContent = total;
+        document.getElementById('daily-avg').textContent = (total / 7).toFixed(1);
     }
 
     document.getElementById('refresh-report').addEventListener('click', () => {
         const btn = document.getElementById('refresh-report');
         btn.disabled = true;
-        btn.innerHTML = '<div class="animate-spin w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full"></div> Refreshing...';
+        btn.innerHTML = '<div class="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> Generating...';
 
         loadDailyReport();
         loadStats();
 
         setTimeout(() => {
             btn.disabled = false;
-            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh';
-        }, 2000);
+            btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Generate New Report';
+        }, 3000);
     });
 
     // Initial load
     loadDailyReport();
     loadStats();
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh stats every 30 seconds
     setInterval(loadStats, 30000);
 </script>
 {% endblock %}

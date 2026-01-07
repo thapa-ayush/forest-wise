@@ -1,7 +1,34 @@
 {% extends 'base.html' %}
 {% block content %}
-<!-- Status Bar -->
-<div class="flex items-center justify-end mb-6">
+<!-- Top Bar -->
+<div class="flex items-center justify-between mb-6">
+    <!-- Time Filter - Simple Tab Style -->
+    <div class="flex items-center gap-1 bg-gray-800/50 rounded-lg p-1">
+        <button class="time-tab active" data-view="current">
+            <span class="w-2 h-2 rounded-full bg-emerald-500 mr-2 animate-pulse"></span>
+            Live
+        </button>
+        <button class="time-tab" data-view="day">Day</button>
+        <button class="time-tab" data-view="month">Month</button>
+        <button class="time-tab" data-view="year">Year</button>
+    </div>
+
+    <!-- Period & Date Picker -->
+    <div class="flex items-center gap-3">
+        <span id="period-display" class="text-sm text-gray-400">Today</span>
+        <input type="date" id="date-picker"
+            class="hidden bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-white">
+        <input type="month" id="month-picker"
+            class="hidden bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-white">
+        <select id="year-picker"
+            class="hidden bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm text-white">
+            <option value="2026">2026</option>
+            <option value="2025">2025</option>
+            <option value="2024">2024</option>
+        </select>
+    </div>
+
+    <!-- Status -->
     <div class="flex items-center gap-3">
         <span id="connection-status" class="status-badge online">
             <span class="status-dot"></span>
@@ -11,58 +38,35 @@
     </div>
 </div>
 
-<!-- Date Filter Bar -->
-<div class="card mb-6">
-    <div class="p-4 flex flex-wrap items-center gap-4">
-        <!-- View Mode Selector -->
-        <div class="flex items-center gap-2">
-            <label class="text-sm text-gray-400">View:</label>
-            <select id="view-mode"
-                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500 focus:border-transparent">
-                <option value="current">Current (Live)</option>
-                <option value="day">Day</option>
-                <option value="month">Month</option>
-                <option value="year">Year</option>
-            </select>
-        </div>
+<!-- Hidden select for compatibility -->
+<select id="view-mode" class="hidden">
+    <option value="current">Current (Live)</option>
+    <option value="day">Day</option>
+    <option value="month">Month</option>
+    <option value="year">Year</option>
+</select>
 
-        <!-- Date Input (for day view) -->
-        <div id="date-picker-container" class="hidden flex items-center gap-2">
-            <input type="date" id="date-picker"
-                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
-        </div>
+<style>
+    .time-tab {
+        padding: 0.5rem 1rem;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        color: #9ca3af;
+        transition: all 0.2s;
+        display: flex;
+        align-items: center;
+    }
 
-        <!-- Month Input (for month view) -->
-        <div id="month-picker-container" class="hidden flex items-center gap-2">
-            <input type="month" id="month-picker"
-                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
-        </div>
+    .time-tab:hover {
+        color: #fff;
+        background: rgba(55, 65, 81, 0.5);
+    }
 
-        <!-- Year Input (for year view) -->
-        <div id="year-picker-container" class="hidden flex items-center gap-2">
-            <select id="year-picker"
-                class="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:ring-2 focus:ring-emerald-500">
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-            </select>
-        </div>
-
-        <!-- Period Display -->
-        <div class="flex-1 text-center">
-            <span id="period-display" class="text-lg font-semibold text-white">Live Stats</span>
-        </div>
-
-        <!-- Reset Button -->
-        <button id="reset-filter" class="btn btn-secondary text-sm hidden">
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            Reset
-        </button>
-    </div>
-</div>
+    .time-tab.active {
+        color: #10b981;
+        background: rgba(16, 185, 129, 0.15);
+    }
+</style>
 
 <!-- Stats Grid -->
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
@@ -318,7 +322,24 @@
     document.getElementById('month-picker').value = currentMonth;
     document.getElementById('year-picker').value = currentYear;
 
-    // View mode change handler
+    // Time tab click handler
+    document.querySelectorAll('.time-tab').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const view = this.dataset.view;
+            currentViewMode = view;
+            document.getElementById('view-mode').value = view;
+
+            // Update active state
+            document.querySelectorAll('.time-tab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            updateDatePickerVisibility();
+            updatePeriodDisplay();
+            loadFilteredStats();
+        });
+    });
+
+    // View mode change handler (hidden select for compatibility)
     document.getElementById('view-mode').addEventListener('change', function () {
         currentViewMode = this.value;
         updateDatePickerVisibility();
@@ -345,36 +366,22 @@
         loadFilteredStats();
     });
 
-    // Reset button handler
-    document.getElementById('reset-filter').addEventListener('click', function () {
-        document.getElementById('view-mode').value = 'current';
-        currentViewMode = 'current';
-        currentDate = new Date().toISOString().split('T')[0];
-        currentMonth = new Date().toISOString().slice(0, 7);
-        currentYear = new Date().getFullYear().toString();
-        document.getElementById('date-picker').value = currentDate;
-        document.getElementById('month-picker').value = currentMonth;
-        document.getElementById('year-picker').value = currentYear;
-        updateDatePickerVisibility();
-        updatePeriodDisplay();
-        loadFilteredStats();
-    });
-
     function updateDatePickerVisibility() {
-        document.getElementById('date-picker-container').classList.add('hidden');
-        document.getElementById('month-picker-container').classList.add('hidden');
-        document.getElementById('year-picker-container').classList.add('hidden');
-        document.getElementById('reset-filter').classList.add('hidden');
+        const datePicker = document.getElementById('date-picker');
+        const monthPicker = document.getElementById('month-picker');
+        const yearPicker = document.getElementById('year-picker');
+
+        // Hide all pickers first
+        datePicker.classList.add('hidden');
+        monthPicker.classList.add('hidden');
+        yearPicker.classList.add('hidden');
 
         if (currentViewMode === 'day') {
-            document.getElementById('date-picker-container').classList.remove('hidden');
-            document.getElementById('reset-filter').classList.remove('hidden');
+            datePicker.classList.remove('hidden');
         } else if (currentViewMode === 'month') {
-            document.getElementById('month-picker-container').classList.remove('hidden');
-            document.getElementById('reset-filter').classList.remove('hidden');
+            monthPicker.classList.remove('hidden');
         } else if (currentViewMode === 'year') {
-            document.getElementById('year-picker-container').classList.remove('hidden');
-            document.getElementById('reset-filter').classList.remove('hidden');
+            yearPicker.classList.remove('hidden');
         }
     }
 
@@ -385,26 +392,25 @@
         const chainsawLabel = document.getElementById('chainsaw-label');
 
         if (currentViewMode === 'current') {
-            const today = new Date();
-            display.textContent = 'Today - ' + today.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            display.textContent = 'Today';
             alertLabel.textContent = 'Alerts Today';
             specLabel.textContent = 'Spectrograms Today';
             chainsawLabel.textContent = 'Chainsaws Today';
         } else if (currentViewMode === 'day') {
             const date = new Date(currentDate);
-            display.textContent = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            display.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             alertLabel.textContent = 'Alerts';
             specLabel.textContent = 'Spectrograms';
             chainsawLabel.textContent = 'Chainsaws';
         } else if (currentViewMode === 'month') {
             const [year, month] = currentMonth.split('-');
             const date = new Date(year, month - 1);
-            display.textContent = date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+            display.textContent = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             alertLabel.textContent = 'Alerts';
             specLabel.textContent = 'Spectrograms';
             chainsawLabel.textContent = 'Chainsaws';
         } else if (currentViewMode === 'year') {
-            display.textContent = 'Year ' + currentYear;
+            display.textContent = currentYear;
             alertLabel.textContent = 'Alerts';
             specLabel.textContent = 'Spectrograms';
             chainsawLabel.textContent = 'Chainsaws';
@@ -472,27 +478,46 @@
             .then(data => {
                 const badge = document.getElementById('lora-running');
                 const serviceBadge = document.getElementById('lora-service-status');
+
                 if (data.status === 'running') {
                     badge.innerHTML = '<span class="status-dot"></span>Online';
                     badge.className = 'status-badge online';
-                    serviceBadge.innerHTML = '<span class="status-dot"></span>Active';
-                    serviceBadge.className = 'status-badge online';
+                    if (serviceBadge) {
+                        serviceBadge.innerHTML = '<span class="status-dot"></span>Active';
+                        serviceBadge.className = 'status-badge online';
+                    }
 
                     // Show health warning if needed
-                    if (data.health === 'warning') {
+                    if (data.health === 'warning' && serviceBadge) {
                         serviceBadge.innerHTML = '<span class="status-dot"></span>Warning';
                         serviceBadge.className = 'status-badge';
                         serviceBadge.style.background = 'rgba(245, 158, 11, 0.2)';
                         serviceBadge.style.color = '#f59e0b';
-                    } else if (data.health === 'critical') {
+                    } else if (data.health === 'critical' && serviceBadge) {
                         serviceBadge.innerHTML = '<span class="status-dot"></span>No Data';
                         serviceBadge.className = 'status-badge offline';
                     }
                 } else {
                     badge.innerHTML = '<span class="status-dot"></span>Offline';
                     badge.className = 'status-badge offline';
-                    serviceBadge.innerHTML = '<span class="status-dot"></span>Offline';
-                    serviceBadge.className = 'status-badge offline';
+                    if (serviceBadge) {
+                        serviceBadge.innerHTML = '<span class="status-dot"></span>Offline';
+                        serviceBadge.className = 'status-badge offline';
+                    }
+                }
+
+                // Update LoRa stats
+                if (data.stats) {
+                    const stats = data.stats;
+                    document.getElementById('lora-packets').textContent = stats.packets_received || 0;
+                    document.getElementById('lora-specs').textContent = stats.spectrograms_saved || 0;
+
+                    if (stats.last_rssi !== undefined && stats.last_rssi !== null) {
+                        document.getElementById('lora-rssi').textContent = stats.last_rssi + ' dBm';
+                    }
+                    if (stats.last_snr !== undefined && stats.last_snr !== null) {
+                        document.getElementById('lora-snr').textContent = stats.last_snr + ' dB';
+                    }
                 }
             })
             .catch(() => { });
@@ -508,9 +533,21 @@
         document.getElementById('last-update').textContent = 'Updated ' + new Date().toLocaleTimeString();
     }
 
-    // Load recent spectrograms
+    // Load recent spectrograms with date filtering
     function loadSpectrograms() {
-        fetch('/api/spectrograms').then(r => r.json()).then(data => {
+        // Build query params based on filter
+        let params = new URLSearchParams();
+        if (currentViewMode === 'day') {
+            params.set('date', currentDate);
+        } else if (currentViewMode === 'month') {
+            params.set('month', currentMonth);
+        } else if (currentViewMode === 'year') {
+            params.set('year', currentYear);
+        }
+        // current mode = no params (today's data)
+        const queryString = params.toString() ? '?' + params.toString() : '';
+
+        fetch('/api/spectrograms' + queryString).then(r => r.json()).then(data => {
             const list = document.getElementById('spectrograms-list');
             if (!data || data.length === 0) {
                 list.innerHTML = '<div class="text-center py-8 text-gray-500"><svg class="w-10 h-10 mx-auto mb-2 opacity-40" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z"/></svg><p class="text-sm">No spectrograms yet</p><p class="text-xs mt-1">Waiting for node data...</p></div>';
@@ -672,9 +709,13 @@
     loadStats();
     loadSpectrograms();
     loadAiMode();
+    loadLoraStatus();
     updatePeriodDisplay();
-    setInterval(() => { loadStats(); updateLastUpdateTime(); }, 10000);
-    setInterval(loadSpectrograms, 15000);
+
+    // Fast polling for responsive dashboard
+    // Socket.IO events also trigger immediate updates
+    setInterval(() => { loadStats(); loadLoraStatus(); updateLastUpdateTime(); }, 3000);
+    setInterval(loadSpectrograms, 5000);
 
     // Socket.IO events (socket declared in app.js)
     socket.on('connect', () => {
@@ -687,10 +728,17 @@
         badge.innerHTML = '<span class="status-dot"></span>Offline';
         badge.className = 'status-badge offline';
     });
-    socket.on('new_spectrogram', (data) => { loadSpectrograms(); loadStats(); });
-    socket.on('spectrogram_analyzed', (data) => {
+    socket.on('new_spectrogram', (data) => {
+        console.log('📡 New spectrogram received:', data);
         loadSpectrograms();
         loadStats();
+        loadLoraStatus();
+    });
+    socket.on('spectrogram_analyzed', (data) => {
+        console.log('🔍 Spectrogram analyzed:', data);
+        loadSpectrograms();
+        loadStats();
+        loadLoraStatus();
         if (selectedSpectrogramId === data.spectrogram_id) showSpectrogram(data.spectrogram_id);
         if (data.classification === 'chainsaw' && data.confidence >= 70) {
             alert('⚠️ CHAINSAW DETECTED!\n\nNode: ' + data.node_id + '\nConfidence: ' + data.confidence + '%');
