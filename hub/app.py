@@ -28,8 +28,11 @@ from ai_service import (
 app = Flask(__name__)
 app.config.from_object(Config)
 CORS(app)
+
+# Configure CSRF protection
 csrf = CSRFProtect(app)
 csrf.exempt(auth_bp)  # Exempt auth routes from CSRF for simpler login
+
 socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
 login_manager.init_app(app)
 limiter.init_app(app)
@@ -334,6 +337,7 @@ def api_spectrogram_detail(spec_id):
 
 
 @app.route('/api/spectrograms/<int:spec_id>/analyze', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_analyze_spectrogram(spec_id):
     """Trigger AI analysis for a spectrogram"""
@@ -561,22 +565,29 @@ def api_get_ai_mode():
 
 
 @app.route('/api/ai/mode', methods=['POST'])
+@csrf.exempt
 @login_required
 def api_set_ai_mode():
     """Set AI analysis mode"""
-    data = request.json or {}
-    mode = data.get('mode', 'gpt4o')
-    
-    if set_ai_mode(mode):
-        # Emit update to all connected clients
-        socketio.emit('ai_mode_changed', {'mode': mode})
-        logging.info(f"AI mode changed to: {mode} by user {current_user.username}")
-        return jsonify({'success': True, 'mode': mode})
-    else:
-        return jsonify({
-            'success': False, 
-            'error': f"Invalid mode: {mode}. Valid modes: gpt4o, custom_vision, auto"
-        }), 400
+    try:
+        data = request.json or {}
+        mode = data.get('mode', 'gpt4o')
+        logging.info(f"Setting AI mode to: '{mode}' (type: {type(mode).__name__})")
+        
+        if set_ai_mode(mode):
+            # Emit update to all connected clients
+            socketio.emit('ai_mode_changed', {'mode': mode})
+            logging.info(f"AI mode changed to: {mode} by user {current_user.username}")
+            return jsonify({'success': True, 'mode': mode})
+        else:
+            logging.warning(f"Invalid AI mode requested: '{mode}'")
+            return jsonify({
+                'success': False, 
+                'error': f"Invalid mode: '{mode}'. Valid modes: gpt4o, custom_vision, auto"
+            }), 400
+    except Exception as e:
+        logging.error(f"Error setting AI mode: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/ai/status')

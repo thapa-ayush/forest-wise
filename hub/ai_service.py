@@ -137,7 +137,11 @@ def analyze_with_custom_vision(image_path: str) -> Dict[str, Any]:
         
         # Build prediction URL
         # Format: https://{endpoint}/customvision/v3.0/Prediction/{project_id}/classify/iterations/{iteration}/image
-        url = f"{Config.AZURE_CUSTOM_VISION_ENDPOINT}/customvision/v3.0/Prediction/{Config.AZURE_CUSTOM_VISION_PROJECT_ID}/classify/iterations/{Config.AZURE_CUSTOM_VISION_ITERATION}/image"
+        endpoint = Config.AZURE_CUSTOM_VISION_ENDPOINT.rstrip('/')  # Remove trailing slash
+        url = f"{endpoint}/customvision/v3.0/Prediction/{Config.AZURE_CUSTOM_VISION_PROJECT_ID}/classify/iterations/{Config.AZURE_CUSTOM_VISION_ITERATION}/image"
+        
+        logger.info(f"Custom Vision URL: {url}")
+        logger.info(f"Custom Vision Key (first 10): {Config.AZURE_CUSTOM_VISION_KEY[:10]}...")
         
         headers = {
             "Prediction-Key": Config.AZURE_CUSTOM_VISION_KEY,
@@ -173,6 +177,10 @@ def analyze_with_custom_vision(image_path: str) -> Dict[str, Any]:
     except requests.exceptions.RequestException as e:
         result["error"] = f"Custom Vision API error: {str(e)}"
         logger.error(result["error"])
+        # Log more details for debugging
+        if hasattr(e, 'response') and e.response is not None:
+            logger.error(f"Response status: {e.response.status_code}")
+            logger.error(f"Response body: {e.response.text[:500]}")
     except Exception as e:
         result["error"] = f"Custom Vision error: {str(e)}"
         logger.error(result["error"])

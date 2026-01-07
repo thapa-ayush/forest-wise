@@ -34,6 +34,9 @@ class Config:
     AZURE_COSMOS_KEY = os.getenv('AZURE_COSMOS_KEY')
     AZURE_COSMOS_ENDPOINT = os.getenv('AZURE_COSMOS_ENDPOINT')
     
+    # Azure Maps
+    AZURE_MAPS_KEY = os.getenv('AZURE_MAPS_KEY')
+    
     # Azure Communication Services (SMS alerts)
     AZURE_COMMUNICATION_CONN_STR = os.getenv('AZURE_COMMUNICATION_CONN_STR')
     
@@ -44,5 +47,5 @@ class Config:
     ADMIN_EMAIL = os.getenv('ADMIN_EMAIL')
     WTF_CSRF_ENABLED = True
     WTF_CSRF_TIME_LIMIT = None  # No time limit for CSRF token
-    RATELIMIT_DEFAULT = '50 per 15 minutes'
+    RATELIMIT_DEFAULT = '500 per minute'  # Increased for dashboard polling
     RATELIMIT_STORAGE_URI = 'memory://'
