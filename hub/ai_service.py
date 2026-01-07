@@ -6,11 +6,59 @@ import os
 import base64
 import logging
 import requests
+import time
 from datetime import datetime
 from typing import Optional, Dict, Any, Tuple
 from config import Config
 
 logger = logging.getLogger(__name__)
+
+# =============================================================================
+# RATE LIMITING FOR AZURE OPENAI (Free tier: 5 requests per 15 minutes)
+# =============================================================================
+class RateLimiter:
+    """Simple rate limiter for Azure OpenAI API calls"""
+    def __init__(self, max_requests: int = 5, window_seconds: int = 900):
+        self.max_requests = max_requests  # 5 requests
+        self.window_seconds = window_seconds  # 15 minutes = 900 seconds
+        self.requests = []  # List of timestamps
+    
+    def can_make_request(self) -> bool:
+        """Check if we can make a request without exceeding rate limit"""
+        now = time.time()
+        # Remove old requests outside the window
+        self.requests = [ts for ts in self.requests if now - ts < self.window_seconds]
+        return len(self.requests) < self.max_requests
+    
+    def record_request(self):
+        """Record that a request was made"""
+        self.requests.append(time.time())
+    
+    def get_wait_time(self) -> int:
+        """Get seconds until next request is allowed"""
+        if self.can_make_request():
+            return 0
+        now = time.time()
+        oldest_request = min(self.requests)
+        return int(self.window_seconds - (now - oldest_request)) + 1
+    
+    def get_remaining_requests(self) -> int:
+        """Get number of requests remaining in current window"""
+        now = time.time()
+        self.requests = [ts for ts in self.requests if now - ts < self.window_seconds]
+        return max(0, self.max_requests - len(self.requests))
+
+# Global rate limiter instance
+azure_openai_rate_limiter = RateLimiter(max_requests=5, window_seconds=900)
+
+def get_rate_limit_status() -> Dict[str, Any]:
+    """Get current rate limit status for dashboard display"""
+    return {
+        "remaining_requests": azure_openai_rate_limiter.get_remaining_requests(),
+        "max_requests": azure_openai_rate_limiter.max_requests,
+        "window_minutes": azure_openai_rate_limiter.window_seconds // 60,
+        "wait_seconds": azure_openai_rate_limiter.get_wait_time()
+    }
 
 # =============================================================================
 # AI MODE CONFIGURATION
@@ -137,10 +185,10 @@ def analyze_with_custom_vision(image_path: str) -> Dict[str, Any]:
 # =============================================================================
 
 SPECTROGRAM_SYSTEM_PROMPT = """You are an expert audio spectrogram analyst for a forest protection system. 
-Your job is to analyze mel-frequency spectrograms (64x64 grayscale images) to detect illegal logging activity.
+Your job is to analyze mel-frequency spectrograms (32x32 grayscale images) to detect illegal logging activity.
 
 SPECTROGRAM INTERPRETATION:
-- X-axis: Time (left to right, ~4 seconds total)
+- X-axis: Time (left to right, ~1 second total)
 - Y-axis: Mel frequency bins (low frequencies at bottom, high at top)
 - Brightness: Energy intensity (brighter = louder)
 
@@ -290,6 +338,15 @@ def _analyze_with_gpt4o_vision(image_path: str, node_id: str, location: Tuple[fl
     """
     Analyze spectrogram using Azure GPT-4o Vision
     """
+    # Check rate limit BEFORE making the request
+    if not azure_openai_rate_limiter.can_make_request():
+        wait_time = azure_openai_rate_limiter.get_wait_time()
+        result["error"] = f"Rate limit exceeded. Please wait {wait_time} seconds before next analysis."
+        result["rate_limited"] = True
+        result["wait_seconds"] = wait_time
+        logger.warning(f"Azure OpenAI rate limit hit. Wait {wait_time}s before retry.")
+        return result
+    
     init_azure_openai()
     
     if openai_client is None:
@@ -300,6 +357,9 @@ def _analyze_with_gpt4o_vision(image_path: str, node_id: str, location: Tuple[fl
     result["service_used"] = "gpt4o"
     
     try:
+        # Record the request BEFORE making it
+        azure_openai_rate_limiter.record_request()
+        
         # Read and encode the image
         with open(image_path, "rb") as image_file:
             image_data = base64.b64encode(image_file.read()).decode('utf-8')
@@ -319,7 +379,7 @@ Context:
 - Node ID: {node_id}
 - Location: {location[0]:.6f}, {location[1]:.6f}
 - Capture Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}
-- Spectrogram: 64x64 mel-frequency bins, ~4 second audio window
+- Spectrogram: 32x32 mel-frequency bins (32 mel bins x 32 time frames), ~1 second audio window
 
 Please classify this spectrogram and assess threat level."""
 

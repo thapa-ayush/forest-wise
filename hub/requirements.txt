@@ -22,6 +22,7 @@ numpy>=1.24.0
 # Azure AI Services
 openai>=1.30.0
 azure-identity>=1.16.0
+azure-cognitiveservices-vision-customvision>=3.1.0
 
 # Azure IoT (optional)
 azure-iot-device>=2.11.0

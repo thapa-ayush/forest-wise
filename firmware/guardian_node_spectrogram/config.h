@@ -7,7 +7,7 @@
 // ============================================
 
 // Node identity - Change this for each node!
-#define NODE_ID "GUARDIAN_001"
+#define NODE_ID "GUARDIAN_002"
 
 // ============================================
 // LoRa Configuration (SX1262)

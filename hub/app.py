@@ -21,7 +21,8 @@ from ai_service import (
     analyze_spectrogram,
     generate_alert_notification,
     get_ai_mode,
-    set_ai_mode
+    set_ai_mode,
+    get_rate_limit_status
 )
 
 app = Flask(__name__)
@@ -347,6 +348,15 @@ def api_analyze_spectrogram(spec_id):
         location=(spec['lat'], spec['lon'])
     )
     
+    # Check if rate limited
+    if result.get('rate_limited'):
+        return jsonify({
+            'error': result.get('error'),
+            'rate_limited': True,
+            'wait_seconds': result.get('wait_seconds', 0),
+            'rate_limit': get_rate_limit_status()
+        }), 429
+    
     # Update database with results
     if result.get('success'):
         db = get_db()
@@ -572,9 +582,11 @@ def api_set_ai_mode():
 @app.route('/api/ai/status')
 @login_required
 def api_ai_status():
-    """Get AI services status"""
+    """Get AI services status including rate limit info"""
+    rate_limit = get_rate_limit_status()
     status = {
         'current_mode': get_ai_mode(),
+        'rate_limit': rate_limit,
         'services': {
             'gpt4o': {
                 'configured': bool(Config.AZURE_OPENAI_KEY and Config.AZURE_OPENAI_ENDPOINT),

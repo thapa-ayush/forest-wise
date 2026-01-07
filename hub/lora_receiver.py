@@ -664,8 +664,11 @@ class LoRaReceiver:
             logging.error(f"Spectrogram decompression error: {e}")
             return None, 0, 0
     
-    def _save_spectrogram_image(self, spec_data, filepath, width=64, height=64):
-        """Save spectrogram as image file. Returns actual filename used."""
+    def _save_spectrogram_image(self, spec_data, filepath, width=32, height=32):
+        """Save spectrogram as image file. Returns actual filename used.
+        
+        Note: ESP32 firmware generates 32x32 spectrograms (SPEC_WIDTH=32, SPEC_HEIGHT=32)
+        """
         try:
             # Try to use PIL if available for PNG
             from PIL import Image
