@@ -210,7 +210,8 @@
                         </svg>
                         Last Seen
                     </div>
-                    <span class="text-sm text-gray-300">{{ n.last_seen }}</span>
+                    <span class="text-sm text-gray-300 last-seen-time" data-timestamp="{{ n.last_seen }}"
+                        title="{{ n.last_seen }}">{{ n.last_seen }}</span>
                 </div>
 
                 <!-- RSSI (if available) -->
@@ -260,12 +261,50 @@
         window.location.href = `/map?node=${nodeId}&lat=${lat}&lon=${lon}`;
     }
 
+    // Format timestamp to relative time (e.g., "Just now", "2m ago", "1h ago")
+    function formatRelativeTime(timestamp) {
+        if (!timestamp) return 'Never';
+
+        const date = new Date(timestamp);
+        if (isNaN(date.getTime())) return timestamp;
+
+        const now = new Date();
+        const diffMs = now - date;
+        const diffSecs = Math.floor(diffMs / 1000);
+        const diffMins = Math.floor(diffSecs / 60);
+        const diffHours = Math.floor(diffMins / 60);
+        const diffDays = Math.floor(diffHours / 24);
+
+        if (diffSecs < 10) return 'Just now';
+        if (diffSecs < 60) return `${diffSecs}s ago`;
+        if (diffMins < 60) return `${diffMins}m ago`;
+        if (diffHours < 24) return `${diffHours}h ago`;
+        if (diffDays < 7) return `${diffDays}d ago`;
+
+        // For older dates, show the date
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    }
+
+    // Update all last seen timestamps
+    function updateLastSeenTimes() {
+        document.querySelectorAll('.last-seen-time').forEach(el => {
+            const timestamp = el.dataset.timestamp;
+            el.textContent = formatRelativeTime(timestamp);
+        });
+    }
+
     // Update counts
     document.addEventListener('DOMContentLoaded', () => {
         const nodes = document.querySelectorAll('.card');
         const onlineNodes = document.querySelectorAll('.status-badge.online');
         document.getElementById('total-count').textContent = nodes.length;
         document.getElementById('online-count').textContent = onlineNodes.length;
+
+        // Format last seen times
+        updateLastSeenTimes();
+
+        // Update every 10 seconds to keep times fresh
+        setInterval(updateLastSeenTimes, 10000);
     });
 
     // Real-time updates (socket declared in app.js)

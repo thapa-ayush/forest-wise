@@ -27,6 +27,10 @@ from ai_service import (
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Static file caching - 1 hour for CSS/JS, browsers cache them
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 3600
+
 CORS(app)
 
 # Configure CSRF protection
@@ -517,99 +521,36 @@ def api_spectrogram_stats():
 @app.route('/api/dashboard/stats')
 @login_required
 def api_dashboard_stats():
-    """Get dashboard statistics with date filtering"""
+    """Get dashboard statistics with date filtering - optimized single query"""
     date = request.args.get('date')  # YYYY-MM-DD
     month = request.args.get('month')  # YYYY-MM
     year = request.args.get('year')  # YYYY
     
-    stats = {'alerts': 0, 'spectrograms': 0, 'chainsaws': 0}
-    
+    # Build date filter condition based on parameters
     if date:
-        # Specific day stats
-        alerts = query_db('''
-            SELECT COUNT(*) as count FROM alerts 
-            WHERE date(timestamp) = date(?)
-        ''', [date], one=True)
-        stats['alerts'] = alerts['count'] if alerts else 0
-        
-        specs = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE date(timestamp) = date(?)
-        ''', [date], one=True)
-        stats['spectrograms'] = specs['count'] if specs else 0
-        
-        chainsaws = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE classification = "chainsaw" 
-            AND date(timestamp) = date(?)
-        ''', [date], one=True)
-        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
-        
+        date_filter = f'date(timestamp) = date("{date}")'
     elif month:
-        # Monthly stats
         year_val, month_val = month.split('-')
-        alerts = query_db('''
-            SELECT COUNT(*) as count FROM alerts 
-            WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
-        ''', [year_val, month_val], one=True)
-        stats['alerts'] = alerts['count'] if alerts else 0
-        
-        specs = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
-        ''', [year_val, month_val], one=True)
-        stats['spectrograms'] = specs['count'] if specs else 0
-        
-        chainsaws = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE classification = "chainsaw" 
-            AND strftime('%Y', timestamp) = ? AND strftime('%m', timestamp) = ?
-        ''', [year_val, month_val], one=True)
-        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
-        
+        date_filter = f"strftime('%Y', timestamp) = '{year_val}' AND strftime('%m', timestamp) = '{month_val}'"
     elif year:
-        # Yearly stats
-        alerts = query_db('''
-            SELECT COUNT(*) as count FROM alerts 
-            WHERE strftime('%Y', timestamp) = ?
-        ''', [year], one=True)
-        stats['alerts'] = alerts['count'] if alerts else 0
-        
-        specs = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE strftime('%Y', timestamp) = ?
-        ''', [year], one=True)
-        stats['spectrograms'] = specs['count'] if specs else 0
-        
-        chainsaws = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE classification = "chainsaw" 
-            AND strftime('%Y', timestamp) = ?
-        ''', [year], one=True)
-        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
-        
+        date_filter = f"strftime('%Y', timestamp) = '{year}'"
     else:
-        # Current/Live stats (today only)
-        alerts = query_db('''
-            SELECT COUNT(*) as count FROM alerts 
-            WHERE date(timestamp) = date("now", "localtime")
-        ''', one=True)
-        stats['alerts'] = alerts['count'] if alerts else 0
-        
-        specs = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE date(timestamp) = date("now", "localtime")
-        ''', one=True)
-        stats['spectrograms'] = specs['count'] if specs else 0
-        
-        chainsaws = query_db('''
-            SELECT COUNT(*) as count FROM spectrograms 
-            WHERE classification = "chainsaw" 
-            AND date(timestamp) = date("now", "localtime")
-        ''', one=True)
-        stats['chainsaws'] = chainsaws['count'] if chainsaws else 0
+        # Default: today's data
+        date_filter = 'date(timestamp) = date("now", "localtime")'
     
-    return jsonify(stats)
+    # Single optimized query to get all stats at once
+    result = query_db(f'''
+        SELECT 
+            (SELECT COUNT(*) FROM alerts WHERE {date_filter}) as alerts,
+            (SELECT COUNT(*) FROM spectrograms WHERE {date_filter}) as spectrograms,
+            (SELECT COUNT(*) FROM spectrograms WHERE classification = "chainsaw" AND {date_filter}) as chainsaws
+    ''', one=True)
+    
+    return jsonify({
+        'alerts': result['alerts'] if result else 0,
+        'spectrograms': result['spectrograms'] if result else 0,
+        'chainsaws': result['chainsaws'] if result else 0
+    })
 
 
 # =============================================================================

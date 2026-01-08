@@ -451,8 +451,9 @@
 
     .scrollable-list {
         flex: 1;
-        min-height: 180px;
-        max-height: 400px;
+        min-height: 200px;
+        max-height: 460px;
+        height: 460px;
         overflow-y: auto;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
@@ -493,6 +494,87 @@
         color: #6b7280;
     }
 
+    /* AI Analysis text - flexible height with scroll */
+    .ai-analysis-text {
+        max-height: 220px;
+        min-height: 100px;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ai-analysis-text::-webkit-scrollbar {
+        width: 4px;
+    }
+
+    .ai-analysis-text::-webkit-scrollbar-track {
+        background: rgba(31, 41, 55, 0.5);
+        border-radius: 2px;
+    }
+
+    .ai-analysis-text::-webkit-scrollbar-thumb {
+        background: rgba(107, 114, 128, 0.5);
+        border-radius: 2px;
+    }
+
+    .ai-analysis-text::-webkit-scrollbar-thumb:hover {
+        background: rgba(107, 114, 128, 0.8);
+    }
+
+    /* Consistent AI Analysis panel layout */
+    .spectrogram-preview {
+        min-height: 380px;
+        max-height: 500px;
+        height: 500px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(17, 24, 39, 0.5);
+        border-radius: 0.5rem;
+        overflow: hidden;
+    }
+
+    .spectrogram-preview img {
+        max-height: 500px;
+        width: 100%;
+        object-fit: contain;
+    }
+
+    #latest-analysis {
+        height: 500px;
+        min-height: 380px;
+        max-height: 500px;
+        overflow: hidden;
+    }
+
+    #latest-analysis>div,
+    .analysis-container {
+        height: 100%;
+    }
+
+    /* Classification box consistent sizing */
+    .classification-box {
+        min-height: 140px;
+    }
+
+    /* Analysis text section - fills remaining space */
+    .analysis-text-box {
+        min-height: 80px;
+    }
+
+    /* Info grid fixed height */
+    .info-grid {
+        min-height: 52px;
+    }
+
+    /* Empty state centering */
+    #latest-analysis>.text-center {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+    }
+
     @media screen and (max-width: 1024px) {
         .content-grid {
             grid-template-columns: 1fr 1fr;
@@ -514,12 +596,18 @@
 
         .spectrogram-preview,
         #latest-analysis {
-            min-height: auto;
+            height: auto;
+            min-height: 200px;
+            max-height: none;
         }
 
         .ai-card .grid {
             grid-template-columns: 1fr !important;
             gap: 0.75rem !important;
+        }
+
+        .classification-box {
+            min-height: 120px;
         }
     }
 
@@ -941,8 +1029,7 @@
                     // Don't reset on network error - keep last values
                 });
 
-            // Load LoRa status (always live)
-            loadLoraStatus();
+            // Note: loadLoraStatus is now called on its own interval, not duplicated here
         }
 
         function loadLoraStatus() {
@@ -1152,7 +1239,30 @@
                     boxBg = 'bg-emerald-500/10'; boxBorder = 'border-emerald-500/30'; textColor = 'text-emerald-400';
                 }
 
-                analysis.innerHTML = '<div class="space-y-4"><div class="text-center p-4 rounded-lg ' + boxBg + ' border ' + boxBorder + '"><div class="mb-2">' + iconSvg + '</div><div class="text-lg font-bold ' + textColor + '">' + (s.classification || 'Unknown').toUpperCase() + '</div><div class="text-3xl font-bold text-white mt-1">' + (s.confidence || 0) + '%</div>' + getThreatBadge(s.threat_level) + actionButton + '</div><div class="p-3 bg-gray-800/50 rounded-lg"><div class="text-xs text-gray-500 mb-1 font-medium">AI Analysis</div><p class="text-sm text-gray-300 leading-relaxed">' + (s.ai_reasoning || 'Analysis pending...') + '</p></div><div class="grid grid-cols-2 gap-2 text-xs"><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Node</div><div class="font-mono text-white">' + s.node_id + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Location</div><div class="font-mono text-white">' + (s.lat ? s.lat.toFixed(4) : '-') + ', ' + (s.lon ? s.lon.toFixed(4) : '-') + '</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">RSSI</div><div class="font-mono text-cyan-400">' + (s.rssi || '-') + ' dBm</div></div><div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Time</div><div class="font-mono text-white">' + new Date(s.timestamp).toLocaleString() + '</div></div></div></div>';
+                analysis.innerHTML = '<div class="analysis-container flex flex-col h-full gap-3">' +
+                    // Classification box - fixed height
+                    '<div class="classification-box text-center p-4 rounded-lg ' + boxBg + ' border ' + boxBorder + ' flex-shrink-0">' +
+                    '<div class="mb-2">' + iconSvg + '</div>' +
+                    '<div class="text-lg font-bold ' + textColor + '">' + (s.classification || 'Unknown').toUpperCase() + '</div>' +
+                    '<div class="text-3xl font-bold text-white mt-1">' + (s.confidence || 0) + '%</div>' +
+                    getThreatBadge(s.threat_level) +
+                    actionButton +
+                    '</div>' +
+                    // AI Analysis text - flexible with scroll
+                    '<div class="analysis-text-box p-3 bg-gray-800/50 rounded-lg flex-1 min-h-0 overflow-hidden flex flex-col">' +
+                    '<div class="text-xs text-gray-500 mb-1 font-medium flex-shrink-0">AI Analysis</div>' +
+                    '<div class="ai-analysis-text flex-1 overflow-y-auto">' +
+                    '<p class="text-sm text-gray-300 leading-relaxed">' + (s.ai_reasoning || 'Analysis pending...') + '</p>' +
+                    '</div>' +
+                    '</div>' +
+                    // Info grid - fixed at bottom
+                    '<div class="info-grid grid grid-cols-2 gap-2 text-xs flex-shrink-0">' +
+                    '<div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Node</div><div class="font-mono text-white">' + s.node_id + '</div></div>' +
+                    '<div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Location</div><div class="font-mono text-white">' + (s.lat ? s.lat.toFixed(4) : '-') + ', ' + (s.lon ? s.lon.toFixed(4) : '-') + '</div></div>' +
+                    '<div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">RSSI</div><div class="font-mono text-cyan-400">' + (s.rssi || '-') + ' dBm</div></div>' +
+                    '<div class="p-2 bg-gray-800/30 rounded"><div class="text-gray-500">Time</div><div class="font-mono text-white">' + new Date(s.timestamp).toLocaleString() + '</div></div>' +
+                    '</div>' +
+                    '</div>';
             }).catch(err => console.error('Error loading spectrogram:', err));
         }
 
@@ -1249,10 +1359,16 @@
         loadLoraStatus();
         updatePeriodDisplay();
 
-        // Fast polling for responsive dashboard
-        // Socket.IO events also trigger immediate updates
-        setInterval(() => { loadStats(); loadLoraStatus(); updateLastUpdateTime(); }, 3000);
-        setInterval(loadSpectrograms, 5000);
+        // Initial data load - do this ONCE immediately
+        loadStats();
+        loadSpectrograms();
+        updateLastUpdateTime();
+
+        // Reduced polling - Socket.IO handles real-time updates
+        // Only poll as backup every 10 seconds (reduced from 3s)
+        let statsInterval = setInterval(() => { loadStats(); updateLastUpdateTime(); }, 10000);
+        let specInterval = setInterval(loadSpectrograms, 15000);  // Reduced from 5s
+        let loraInterval = setInterval(loadLoraStatus, 20000);  // LoRa status less frequent
 
         // Socket.IO events (socket declared in app.js)
         socket.on('connect', () => {
@@ -1265,24 +1381,32 @@
             badge.innerHTML = '<span class="status-dot"></span>Offline';
             badge.className = 'status-badge offline';
         });
+        // Debounce to prevent multiple rapid updates
+        let updatePending = false;
+        function debouncedUpdate() {
+            if (updatePending) return;
+            updatePending = true;
+            setTimeout(() => {
+                loadSpectrograms();
+                loadStats();
+                updatePending = false;
+            }, 500);  // Wait 500ms to batch updates
+        }
+
         socket.on('new_spectrogram', (data) => {
             console.log('📡 New spectrogram received:', data);
-            loadSpectrograms();
-            loadStats();
-            loadLoraStatus();
+            debouncedUpdate();
         });
         socket.on('spectrogram_analyzed', (data) => {
             console.log('🔍 Spectrogram analyzed:', data);
-            loadSpectrograms();
-            loadStats();
-            loadLoraStatus();
+            debouncedUpdate();
             if (selectedSpectrogramId === data.spectrogram_id) showSpectrogram(data.spectrogram_id);
             if (data.classification === 'chainsaw' && data.confidence >= 70) {
                 alert('⚠️ CHAINSAW DETECTED!\n\nNode: ' + data.node_id + '\nConfidence: ' + data.confidence + '%');
             }
         });
-        socket.on('new_alert', (data) => loadStats());
-        socket.on('node_update', (data) => loadStats());
+        socket.on('new_alert', (data) => debouncedUpdate());
+        socket.on('node_update', (data) => debouncedUpdate());
         socket.on('ai_mode_changed', (data) => {
             document.getElementById('current-ai-mode').textContent = getModeLabel(data.mode);
             document.getElementById('ai-mode-select').value = data.mode;

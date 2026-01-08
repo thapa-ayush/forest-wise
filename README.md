@@ -52,9 +52,17 @@ The system is designed for **remote deployment** with:
 ### AI Analysis Modes
 
 1. **GPT-4o Vision** (Default): Highest accuracy (~95%), detailed reasoning, visual feature detection
-2. **Custom Vision**: Fast classification, lower latency, trained on forest sounds
+2. **Custom Vision**: Fast cloud classification, trained on 2000+ spectrograms
 3. **Auto Mode**: Custom Vision for speed, GPT-4o for threat verification
-4. **Local TFLite**: Fully offline mode using on-device ML model
+4. **Local TFLite**: Fully offline mode using on-device ML model (88.9% precision, ~17ms inference)
+
+### Classification Categories
+
+| Category | Threat Level | Description |
+|----------|--------------|-------------|
+| 🪓 **Chainsaw** | CRITICAL | Active logging detected - immediate alert |
+| 🚗 **Vehicle** | MEDIUM | Engine/machinery sounds - potential logging vehicle |
+| 🌲 **Nature** | NONE | Normal forest sounds (birds, wind, rain) |
 
 ### Dashboard Features
 

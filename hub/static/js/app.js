@@ -1,17 +1,13 @@
 // app.js - Forest Guardian Hub
 const socket = io({
     reconnection: true,
-    reconnectionAttempts: Infinity,
-    reconnectionDelay: 500,
-    reconnectionDelayMax: 2000,
-    timeout: 10000,
-    transports: ['polling'], // Use polling only - WebSocket has issues on Pi 5
-    upgrade: false,
-    forceNew: false,
-    // Shorter polling intervals for more responsive updates
-    polling: {
-        duration: 1000  // Poll every 1 second
-    }
+    reconnectionAttempts: 10,
+    reconnectionDelay: 1000,
+    reconnectionDelayMax: 5000,
+    timeout: 20000,
+    transports: ['websocket', 'polling'],  // Try WebSocket first, fallback to polling
+    upgrade: true,  // Allow upgrade from polling to websocket
+    forceNew: false
 });
 
 // Connection state
