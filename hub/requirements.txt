@@ -1,33 +1,62 @@
-# Flask web framework and extensions
+# =============================================================================
+# Forest Guardian Hub - Python Dependencies
+# Raspberry Pi 5 + Flask Web Application
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Flask Web Framework & Extensions
+# -----------------------------------------------------------------------------
 Flask>=3.0.0
-Flask-Login>=0.6.3
-Flask-SocketIO>=5.3.6
-Flask-Limiter>=3.5.0
-Flask-WTF>=1.2.0
-Flask-Bcrypt>=1.0.1
-Flask-Cors>=4.0.0
-Werkzeug>=3.0.0
+Flask-Login>=0.6.3           # User session management
+Flask-SocketIO>=5.3.6        # WebSocket for real-time updates
+Flask-Limiter>=3.5.0         # Rate limiting protection
+Flask-WTF>=1.2.0             # CSRF protection & forms
+Flask-Bcrypt>=1.0.1          # Password hashing
+Flask-Cors>=4.0.0            # Cross-origin requests
+Werkzeug>=3.0.0              # WSGI utilities
 
+# -----------------------------------------------------------------------------
 # Database
-SQLAlchemy>=2.0.0
+# -----------------------------------------------------------------------------
+SQLAlchemy>=2.0.0            # ORM (used for some utilities, main DB is raw SQLite)
 
+# -----------------------------------------------------------------------------
 # Utilities
-python-dotenv>=1.0.0
-PyJWT>=2.8.0
-requests>=2.31.0
-geopy>=2.4.0
-Pillow>=10.0.0
-numpy>=1.24.0
+# -----------------------------------------------------------------------------
+python-dotenv>=1.0.0         # Environment variable management
+PyJWT>=2.8.0                 # JWT token handling
+requests>=2.31.0             # HTTP client for Azure APIs
+geopy>=2.4.0                 # GPS coordinate utilities
+Pillow>=10.0.0               # Image processing for spectrograms
+numpy>=1.24.0                # Numerical operations
 
+# -----------------------------------------------------------------------------
 # Azure AI Services
-openai>=1.30.0
-azure-identity>=1.16.0
-azure-cognitiveservices-vision-customvision>=3.1.0
+# -----------------------------------------------------------------------------
+openai>=1.30.0               # Azure OpenAI SDK (GPT-4o Vision)
+azure-identity>=1.16.0       # Azure authentication
+azure-cognitiveservices-vision-customvision>=3.1.0  # Custom Vision API
 
-# Azure IoT (optional)
-azure-iot-device>=2.11.0
-azure-cosmos>=4.6.0
+# -----------------------------------------------------------------------------
+# Azure Cloud Services (Optional - for cloud sync)
+# -----------------------------------------------------------------------------
+azure-iot-device>=2.11.0     # Azure IoT Hub device SDK
+azure-cosmos>=4.6.0          # Cosmos DB for cloud storage
 
-# Raspberry Pi GPIO for LoRa
-lgpio>=0.2.0
-spidev>=3.6
+# -----------------------------------------------------------------------------
+# Raspberry Pi Hardware (LoRa RFM95W Module)
+# -----------------------------------------------------------------------------
+lgpio>=0.2.0                 # GPIO library for Raspberry Pi 5
+spidev>=3.6                  # SPI interface for LoRa module
+
+# -----------------------------------------------------------------------------
+# TFLite for Local Inference (Offline Mode)
+# -----------------------------------------------------------------------------
+# tflite-runtime              # Uncomment for local ML inference (ARM only)
+
+# -----------------------------------------------------------------------------
+# Development Tools (Optional)
+# -----------------------------------------------------------------------------
+# pytest                      # Testing
+# black                       # Code formatting
+# flake8                      # Linting

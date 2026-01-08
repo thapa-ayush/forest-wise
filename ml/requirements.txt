@@ -1,19 +1,49 @@
-# ML requirements for Forest Guardian
-numpy
-scipy
-librosa
-soundfile
-matplotlib
-scikit-learn
-tensorflow==2.15.0
-tflite-support
-python-dotenv
-azureml-sdk
-jupyter
-pydub
-requests
+# =============================================================================
+# Forest Guardian ML Pipeline - Python Dependencies
+# Training and data preprocessing for chainsaw detection model
+# =============================================================================
 
-# Azure Custom Vision SDK for training & export
-azure-cognitiveservices-vision-customvision
-msrest
-Pillow
+# -----------------------------------------------------------------------------
+# Core ML & Scientific Computing
+# -----------------------------------------------------------------------------
+numpy>=1.24.0                # Numerical operations
+scipy>=1.11.0                # Signal processing
+scikit-learn>=1.3.0          # ML utilities
+
+# -----------------------------------------------------------------------------
+# Audio Processing
+# -----------------------------------------------------------------------------
+librosa>=0.10.0              # Audio analysis and spectrogram generation
+soundfile>=0.12.0            # Audio file I/O
+pydub>=0.25.0                # Audio manipulation
+
+# -----------------------------------------------------------------------------
+# Deep Learning
+# -----------------------------------------------------------------------------
+tensorflow>=2.15.0           # Model training
+tflite-support>=0.4.0        # TFLite conversion utilities
+
+# -----------------------------------------------------------------------------
+# Visualization
+# -----------------------------------------------------------------------------
+matplotlib>=3.7.0            # Plotting spectrograms and training curves
+
+# -----------------------------------------------------------------------------
+# Azure ML (Optional - for cloud training)
+# -----------------------------------------------------------------------------
+azureml-sdk>=1.50.0          # Azure Machine Learning SDK
+
+# -----------------------------------------------------------------------------
+# Azure Custom Vision (For training custom classifier)
+# -----------------------------------------------------------------------------
+azure-cognitiveservices-vision-customvision>=3.1.0
+msrest>=0.7.0                # Azure REST client
+Pillow>=10.0.0               # Image processing
+
+# -----------------------------------------------------------------------------
+# Utilities
+# -----------------------------------------------------------------------------
+python-dotenv>=1.0.0         # Environment variables
+requests>=2.31.0             # HTTP client for data download
+jupyter>=1.0.0               # Notebook environment for experimentation
+tqdm>=4.66.0                 # Progress bars
