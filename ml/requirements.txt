@@ -12,3 +12,8 @@ azureml-sdk
 jupyter
 pydub
 requests
+
+# Azure Custom Vision SDK for training & export
+azure-cognitiveservices-vision-customvision
+msrest
+Pillow

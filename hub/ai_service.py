@@ -63,8 +63,9 @@ def get_rate_limit_status() -> Dict[str, Any]:
 # =============================================================================
 # AI MODE CONFIGURATION
 # =============================================================================
-# Can be set via dashboard: 'gpt4o', 'custom_vision', or 'auto'
+# Can be set via dashboard: 'gpt4o', 'custom_vision', 'auto', or 'local'
 # 'auto' uses Custom Vision for fast classification, GPT-4o for verification
+# 'local' uses offline TFLite model on Raspberry Pi
 current_ai_mode = 'gpt4o'  # Default mode
 
 def get_ai_mode():
@@ -72,13 +73,68 @@ def get_ai_mode():
     return current_ai_mode
 
 def set_ai_mode(mode: str):
-    """Set AI analysis mode: 'gpt4o', 'custom_vision', or 'auto'"""
+    """Set AI analysis mode: 'gpt4o', 'custom_vision', 'auto', or 'local'"""
     global current_ai_mode
-    if mode in ['gpt4o', 'custom_vision', 'auto']:
+    if mode in ['gpt4o', 'custom_vision', 'auto', 'local']:
         current_ai_mode = mode
         logger.info(f"AI mode set to: {mode}")
         return True
     return False
+
+
+# =============================================================================
+# NETWORK CONNECTIVITY CHECK
+# =============================================================================
+def check_network_available() -> bool:
+    """Quick check if network/internet is available"""
+    try:
+        import socket
+        socket.create_connection(("8.8.8.8", 53), timeout=2)
+        return True
+    except (socket.timeout, socket.error, OSError):
+        return False
+
+
+# =============================================================================
+# LOCAL INFERENCE (Offline Mode)
+# =============================================================================
+def _analyze_with_local_inference(image_path: str, node_id: str, location, result: Dict) -> Dict[str, Any]:
+    """
+    Analyze spectrogram using local TFLite model (offline mode)
+    """
+    try:
+        from local_inference import analyze_spectrogram_local, is_local_inference_available
+        
+        if not is_local_inference_available():
+            result["error"] = "Local TFLite model not available"
+            return result
+        
+        local_result = analyze_spectrogram_local(image_path)
+        
+        if local_result.get("success"):
+            result["success"] = True
+            result["classification"] = local_result.get("classification", "unknown")
+            result["confidence"] = local_result.get("confidence", 0)
+            result["threat_level"] = local_result.get("threat_level", "NONE")
+            result["service_used"] = "local_tflite"
+            result["offline"] = True
+            result["all_predictions"] = local_result.get("all_predictions", [])
+            result["inference_time_ms"] = local_result.get("inference_time_ms", 0)
+            result["reasoning"] = f"Local inference: {result['classification']} detected with {result['confidence']}% confidence"
+            result["features_detected"] = [result["classification"]]
+            result["recommended_action"] = "Verify with Azure AI when online" if result["threat_level"] in ["CRITICAL", "HIGH"] else "No action needed"
+        else:
+            result["error"] = local_result.get("error", "Local inference failed")
+        
+        return result
+        
+    except ImportError:
+        result["error"] = "Local inference module not available"
+        return result
+    except Exception as e:
+        result["error"] = f"Local inference error: {str(e)}"
+        logger.error(result["error"])
+        return result
 
 
 # =============================================================================
@@ -245,6 +301,9 @@ def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[floa
     - 'gpt4o': Use Azure GPT-4o Vision
     - 'custom_vision': Use Azure Custom Vision
     - 'auto': Use Custom Vision first, GPT-4o for verification if threat detected
+    - 'local': Use local TFLite model (offline mode)
+    
+    When network is unavailable, automatically falls back to local inference.
     
     Args:
         image_path: Path to the spectrogram PNG/PGM file
@@ -269,7 +328,8 @@ def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[floa
         "location": {"lat": location[0], "lon": location[1]},
         "image_path": image_path,
         "ai_mode": current_ai_mode,
-        "service_used": ""
+        "service_used": "",
+        "offline": False
     }
     
     if not os.path.exists(image_path):
@@ -277,7 +337,24 @@ def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[floa
         logger.error(result["error"])
         return result
     
-    # Route to appropriate AI service based on mode
+    # Check if local mode requested or if we should check network
+    use_local = current_ai_mode == 'local'
+    network_available = True
+    
+    # For cloud modes, check network availability
+    if current_ai_mode in ['gpt4o', 'custom_vision', 'auto']:
+        network_available = check_network_available()
+        if not network_available:
+            logger.warning("Network unavailable, falling back to local inference")
+            use_local = True
+            result["offline"] = True
+            result["offline_reason"] = "Network unavailable"
+    
+    # Route to local inference if needed
+    if use_local:
+        return _analyze_with_local_inference(image_path, node_id, location, result)
+    
+    # Route to appropriate cloud AI service based on mode
     if current_ai_mode == 'custom_vision':
         return _analyze_with_custom_vision_full(image_path, node_id, location, result)
     elif current_ai_mode == 'gpt4o':
