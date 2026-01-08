@@ -1,137 +1,356 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-wrap items-center justify-between gap-4">
-        <div>
-            <h1 class="text-2xl font-bold text-white flex items-center gap-2">
-                <svg class="w-7 h-7 text-yellow-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                        d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Alert History
-            </h1>
-            <p class="text-gray-400 text-sm mt-1">View and manage historical alerts by date</p>
-        </div>
-        <a href="/alerts" class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">
-            ← Back to Live Alerts
-        </a>
+<style>
+    .page-header-responsive {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .page-title-text {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: #9ca3af;
+        font-size: 0.8125rem;
+        margin-top: 0.125rem;
+    }
+
+    .filter-card {
+        padding: 0.875rem !important;
+    }
+
+    .filter-controls {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .date-nav {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .date-input {
+        background: rgba(31, 41, 55, 0.8);
+        border: 1px solid rgba(75, 85, 99, 0.5);
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.8125rem;
+        color: white;
+        min-height: 40px;
+    }
+
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .stats-grid .card {
+        padding: 0.875rem;
+    }
+
+    .stats-grid .stat-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .stats-grid .stat-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .stats-grid .stat-icon svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    .stats-grid .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        line-height: 1;
+    }
+
+    .stats-grid .stat-label {
+        font-size: 0.6875rem;
+        color: #9ca3af;
+    }
+
+    .content-grid {
+        display: grid;
+        grid-template-columns: 1fr 3fr;
+        gap: 1rem;
+    }
+
+    @media screen and (max-width: 1024px) {
+        .stats-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media screen and (max-width: 800px) {
+        .page-header-responsive {
+            margin-bottom: 0.75rem;
+        }
+
+        .page-title-text {
+            font-size: 1.125rem;
+        }
+
+        .page-subtitle {
+            display: none;
+        }
+
+        .filter-card {
+            padding: 0.625rem !important;
+        }
+
+        .filter-controls {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .stats-grid {
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .stats-grid .card {
+            padding: 0.625rem;
+        }
+
+        .stats-grid .stat-icon {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .stats-grid .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .content-grid {
+            gap: 0.75rem;
+        }
+    }
+</style>
+
+<!-- Page Header -->
+<div class="page-header-responsive">
+    <div>
+        <h1 class="page-title-text">
+            <svg class="w-6 h-6 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Alert History</span>
+        </h1>
+        <p class="page-subtitle">View and manage historical alerts by date</p>
     </div>
+    <a href="/alerts" class="btn btn-secondary">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+        </svg>
+        <span>Back to Live</span>
+    </a>
+</div>
 
-    <!-- Controls Bar -->
-    <div class="bg-gray-800 rounded-xl p-4 flex flex-wrap items-center gap-4">
+<!-- Controls Bar -->
+<div class="card filter-card mb-4">
+    <div class="filter-controls">
         <!-- Date Picker -->
-        <div class="flex items-center gap-2">
-            <label class="text-gray-400 text-sm">Select Date:</label>
-            <input type="date" id="datePicker" value="{{ selected_date }}"
-                class="bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 text-white focus:ring-2 focus:ring-green-500 focus:border-transparent">
-        </div>
-
-        <!-- Quick Date Buttons -->
-        <div class="flex gap-2">
-            <button onclick="setDate('today')"
-                class="px-3 py-2 bg-green-600 hover:bg-green-500 rounded-lg text-white text-sm transition">Today</button>
-            <button onclick="setDate('yesterday')"
-                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">Yesterday</button>
-            <button onclick="setDate('week')"
-                class="px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white text-sm transition">Last 7
-                Days</button>
+        <div class="date-nav">
+            <label class="text-gray-400 text-sm">Date:</label>
+            <input type="date" id="datePicker" value="{{ selected_date }}" class="date-input">
+            <button onclick="setDate('today')" class="btn btn-primary btn-sm">Today</button>
+            <button onclick="setDate('yesterday')" class="btn btn-secondary btn-sm">Yesterday</button>
         </div>
 
         <!-- Clear Options -->
-        <div class="ml-auto flex gap-2">
-            <button onclick="clearAlerts('responded')"
-                class="px-3 py-2 bg-yellow-600 hover:bg-yellow-500 rounded-lg text-white text-sm transition">
+        <div class="flex items-center gap-2">
+            <button onclick="clearAlerts('responded')" class="btn btn-warning btn-sm">
                 Clear Responded
             </button>
-            <button onclick="clearAlerts('date')"
-                class="px-3 py-2 bg-orange-600 hover:bg-orange-500 rounded-lg text-white text-sm transition">
-                Clear This Day
-            </button>
-            <button onclick="clearAlerts('all')"
-                class="px-3 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white text-sm transition">
-                Clear All
+            <button onclick="clearAlerts('date')" class="btn btn-danger btn-sm">
+                Clear Day
             </button>
         </div>
     </div>
+</div>
 
-    <!-- Stats Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-4" id="statsCards">
-        <div class="bg-gray-800 rounded-xl p-4">
-            <div class="text-gray-400 text-sm">Total Alerts</div>
-            <div class="text-3xl font-bold text-white" id="statTotal">--</div>
-        </div>
-        <div class="bg-gray-800 rounded-xl p-4">
-            <div class="text-gray-400 text-sm">Chainsaw Detections</div>
-            <div class="text-3xl font-bold text-red-500" id="statChainsaw">--</div>
-        </div>
-        <div class="bg-gray-800 rounded-xl p-4">
-            <div class="text-gray-400 text-sm">Responded</div>
-            <div class="text-3xl font-bold text-green-500" id="statResponded">--</div>
-        </div>
-        <div class="bg-gray-800 rounded-xl p-4">
-            <div class="text-gray-400 text-sm">Avg Confidence</div>
-            <div class="text-3xl font-bold text-blue-500" id="statConfidence">--%</div>
+<!-- Stats Row -->
+<div class="stats-grid">
+    <!-- Total Alerts -->
+    <div class="card bg-gradient-to-br from-blue-500/10 to-transparent border-blue-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-blue-500/20">
+                <svg class="text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+            </div>
+            <div>
+                <div id="statTotal" class="stat-value">--</div>
+                <div class="stat-label">Total Alerts</div>
+            </div>
         </div>
     </div>
 
-    <!-- Available Dates Sidebar + Alerts Table -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        <!-- Dates with Alerts -->
-        <div class="bg-gray-800 rounded-xl p-4">
-            <h3 class="text-white font-semibold mb-3">📅 Dates with Alerts</h3>
-            <div class="space-y-2 max-h-96 overflow-y-auto" id="datesList">
-                <div class="text-gray-500 text-sm">Loading...</div>
+    <!-- Chainsaws -->
+    <div class="card bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-red-500/20">
+                <svg class="text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+            </div>
+            <div>
+                <div id="statChainsaw" class="stat-value">--</div>
+                <div class="stat-label">Chainsaws</div>
             </div>
         </div>
+    </div>
 
-        <!-- Alerts Table -->
-        <div class="lg:col-span-3 bg-gray-800 rounded-xl p-4">
-            <h3 class="text-white font-semibold mb-3">
-                🚨 Alerts for <span id="currentDate" class="text-green-400">{{ selected_date }}</span>
-            </h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-left text-sm">
-                    <thead>
-                        <tr class="border-b border-gray-700 text-gray-400">
-                            <th class="py-3 px-2">ID</th>
-                            <th class="px-2">Node</th>
-                            <th class="px-2">Classification</th>
-                            <th class="px-2">Confidence</th>
-                            <th class="px-2">Location</th>
-                            <th class="px-2">Time</th>
-                            <th class="px-2">Status</th>
-                            <th class="px-2">Action</th>
-                        </tr>
-                    </thead>
-                    <tbody id="alertsTable">
-                        <tr>
-                            <td colspan="8" class="py-8 text-center text-gray-500">Loading alerts...</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-            <div id="noAlerts" class="hidden py-12 text-center">
-                <svg class="w-16 h-16 mx-auto text-gray-600 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <!-- Responded -->
+    <div class="card bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-emerald-500/20">
+                <svg class="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
-                <p class="text-gray-400">No alerts for this date</p>
+            </div>
+            <div>
+                <div id="statResponded" class="stat-value">--</div>
+                <div class="stat-label">Responded</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Avg Confidence -->
+    <div class="card bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-purple-500/20">
+                <svg class="text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+            </div>
+            <div>
+                <div id="statConfidence" class="stat-value">--%</div>
+                <div class="stat-label">Avg Confidence</div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Main Content Grid -->
+<div class="content-grid">
+    <!-- Dates with Alerts -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                <span>Dates</span>
+            </h2>
+        </div>
+        <div class="space-y-2 max-h-96 overflow-y-auto custom-scroll" id="datesList">
+            <div class="text-gray-500 text-sm p-3">Loading...</div>
+        </div>
+    </div>
+
+    <!-- Alerts Table -->
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">
+                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                <span>Alerts for <span id="currentDate" class="text-emerald-400">{{ selected_date }}</span></span>
+            </h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead>
+                    <tr class="border-b border-gray-700 text-gray-400">
+                        <th class="py-3 px-2">ID</th>
+                        <th class="px-2">Node</th>
+                        <th class="px-2">Classification</th>
+                        <th class="px-2">Confidence</th>
+                        <th class="px-2">Location</th>
+                        <th class="px-2">Time</th>
+                        <th class="px-2">Status</th>
+                        <th class="px-2">Action</th>
+                    </tr>
+                </thead>
+                <tbody id="alertsTable">
+                    <tr>
+                        <td colspan="8" class="py-8 text-center text-gray-500">Loading alerts...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        <div id="noAlerts" class="hidden py-12 text-center">
+            <svg class="w-12 h-12 mx-auto text-gray-600 mb-3 opacity-50" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                    d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <p class="text-gray-400 text-sm">No alerts for this date</p>
+        </div>
+    </div>
+</div>
+
 <!-- Confirmation Modal -->
-<div id="confirmModal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
-    <div class="bg-gray-800 rounded-xl p-6 max-w-md mx-4">
-        <h3 class="text-xl font-bold text-white mb-4">⚠️ Confirm Clear</h3>
-        <p class="text-gray-300 mb-6" id="confirmMessage">Are you sure you want to clear these alerts?</p>
-        <div class="flex gap-3 justify-end">
-            <button onclick="closeModal()"
-                class="px-4 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg text-white transition">Cancel</button>
-            <button id="confirmBtn"
-                class="px-4 py-2 bg-red-600 hover:bg-red-500 rounded-lg text-white transition">Confirm</button>
+<div id="confirmModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm hidden items-center justify-center z-50">
+    <div class="card max-w-md w-full mx-4">
+        <div class="p-6">
+            <div class="flex items-center gap-3 mb-4">
+                <div class="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center">
+                    <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold text-white">Confirm Clear</h3>
+                    <p class="text-sm text-gray-400">This action cannot be undone</p>
+                </div>
+            </div>
+            <p id="confirmMessage" class="text-gray-300 mb-6">Are you sure you want to clear these alerts?</p>
+            <div class="flex gap-3 justify-end">
+                <button onclick="closeModal()" class="btn btn-secondary">Cancel</button>
+                <button id="confirmBtn" class="btn btn-danger">Confirm</button>
+            </div>
         </div>
     </div>
 </div>

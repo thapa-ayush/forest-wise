@@ -3,9 +3,12 @@
 
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="description" content="Forest Guardian - AI-Powered Illegal Logging Detection System">
     <meta name="theme-color" content="#10b981">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>{% block title %}Forest Guardian{% endblock %}</title>
 
     <!-- Favicon -->
@@ -29,7 +32,15 @@
                     height="80">
             </a>
 
-            <div class="nav-links">
+            <div class="nav-links" id="nav-links">
+                <!-- Close button for mobile menu -->
+                <button class="nav-close-btn md:hidden" onclick="toggleMobileMenu()">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+
                 <a href="{{ url_for('index') }}" class="nav-link {% if request.endpoint == 'index' %}active{% endif %}">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -96,13 +107,16 @@
             </div>
 
             <!-- Mobile menu button -->
-            <button class="nav-menu-btn md:hidden" onclick="toggleMobileMenu()">
+            <button class="nav-menu-btn md:hidden" onclick="toggleMobileMenu()" aria-label="Toggle menu">
                 <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
                 </svg>
             </button>
         </div>
     </nav>
+
+    <!-- Mobile menu overlay -->
+    <div class="nav-overlay" id="nav-overlay" onclick="toggleMobileMenu()"></div>
 
     <!-- Main Content -->
     <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -148,9 +162,41 @@
     <script src="{{ url_for('static', filename='js/app.js') }}"></script>
     <script>
         function toggleMobileMenu() {
-            const navLinks = document.querySelector('.nav-links');
-            navLinks.classList.toggle('mobile-open');
+            const navLinks = document.getElementById('nav-links');
+            const navOverlay = document.getElementById('nav-overlay');
+            const isOpen = navLinks.classList.contains('mobile-open');
+
+            if (isOpen) {
+                navLinks.classList.remove('mobile-open');
+                navOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            } else {
+                navLinks.classList.add('mobile-open');
+                navOverlay.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
         }
+
+        // Close menu when clicking a nav link
+        document.querySelectorAll('.nav-link').forEach(link => {
+            link.addEventListener('click', () => {
+                const navLinks = document.getElementById('nav-links');
+                if (navLinks.classList.contains('mobile-open')) {
+                    toggleMobileMenu();
+                }
+            });
+        });
+
+        // Close menu on window resize to desktop
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768) {
+                const navLinks = document.getElementById('nav-links');
+                const navOverlay = document.getElementById('nav-overlay');
+                navLinks.classList.remove('mobile-open');
+                navOverlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        });
     </script>
 </body>
 

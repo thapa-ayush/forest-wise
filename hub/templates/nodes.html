@@ -1,16 +1,16 @@
 {% extends 'base.html' %}
 {% block content %}
 <!-- Page Header -->
-<div class="flex items-center justify-between mb-6">
+<div class="page-header-responsive">
     <div>
-        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
-            <svg class="w-7 h-7 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <h1 class="page-title-text">
+            <svg class="w-6 h-6 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
             </svg>
-            Guardian Nodes
+            <span>Nodes</span>
         </h1>
-        <p class="text-gray-400 text-sm mt-1">Monitor your forest protection network</p>
+        <p class="page-subtitle">Forest protection network</p>
     </div>
     <div class="flex items-center gap-2">
         <span class="text-sm text-gray-400">
@@ -19,8 +19,107 @@
     </div>
 </div>
 
+<style>
+    .page-header-responsive {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .page-title-text {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .page-subtitle {
+        color: #9ca3af;
+        font-size: 0.8125rem;
+        margin-top: 0.125rem;
+    }
+
+    /* Nodes Grid Responsive */
+    #nodes-container {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 1rem;
+    }
+
+    @media screen and (max-width: 1024px) {
+        #nodes-container {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media screen and (max-width: 800px) {
+        .page-header-responsive {
+            margin-bottom: 0.75rem;
+        }
+
+        .page-title-text {
+            font-size: 1.125rem;
+        }
+
+        .page-title-text svg {
+            width: 20px;
+            height: 20px;
+        }
+
+        .page-subtitle {
+            display: none;
+        }
+
+        #nodes-container {
+            grid-template-columns: 1fr;
+            gap: 0.75rem;
+        }
+
+        #nodes-container .card {
+            padding: 0.875rem;
+        }
+
+        #nodes-container .card .p-5 {
+            padding: 0 !important;
+        }
+
+        #nodes-container .w-12 {
+            width: 2.5rem;
+            height: 2.5rem;
+        }
+
+        #nodes-container .w-12 svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        #nodes-container {
+            gap: 0.5rem;
+        }
+
+        #nodes-container .card {
+            padding: 0.75rem;
+        }
+    }
+
+    /* Landscape mode for 5" display */
+    @media screen and (max-width: 800px) and (max-height: 480px) and (orientation: landscape) {
+        #nodes-container {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.5rem;
+        }
+    }
+</style>
+
 <!-- Nodes Grid -->
-<div id="nodes-container" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+<div id="nodes-container">
     {% for n in nodes %}
     <div class="card hover:border-gray-600 transition-colors">
         <div class="p-5">

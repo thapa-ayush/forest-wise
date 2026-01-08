@@ -184,13 +184,15 @@ def api_alerts_filtered():
     })
 
 @app.route('/api/alerts/clear', methods=['DELETE'])
+@csrf.exempt
 @login_required
 def api_clear_alerts():
-    """Clear alerts based on filters"""
+    """Clear alerts based on filters, optionally with associated spectrograms"""
     date = request.args.get('date')
     month = request.args.get('month')
     year = request.args.get('year')
     status = request.args.get('status')
+    delete_spectrograms = request.args.get('delete_spectrograms', 'false').lower() == 'true'
     
     # Build query
     conditions = []
@@ -214,10 +216,50 @@ def api_clear_alerts():
     
     try:
         db = get_db()
+        
+        # If deleting spectrograms, first get the spectrogram IDs and delete them
+        deleted_spectrograms = 0
+        if delete_spectrograms:
+            # Get spectrogram IDs linked to alerts being deleted
+            spec_ids = db.execute(
+                f"SELECT DISTINCT spectrogram_id FROM alerts WHERE {where_clause} AND spectrogram_id IS NOT NULL",
+                params
+            ).fetchall()
+            
+            if spec_ids:
+                spec_id_list = [row['spectrogram_id'] for row in spec_ids]
+                
+                # Get image paths for file deletion
+                placeholders = ','.join(['?' for _ in spec_id_list])
+                images = db.execute(
+                    f"SELECT image_path FROM spectrograms WHERE id IN ({placeholders})",
+                    spec_id_list
+                ).fetchall()
+                
+                # Delete spectrogram image files
+                for img in images:
+                    if img['image_path'] and os.path.exists(img['image_path']):
+                        try:
+                            os.remove(img['image_path'])
+                        except Exception as e:
+                            logging.warning(f"Could not delete spectrogram file {img['image_path']}: {e}")
+                
+                # Delete from spectrograms table
+                result_spec = db.execute(
+                    f"DELETE FROM spectrograms WHERE id IN ({placeholders})",
+                    spec_id_list
+                )
+                deleted_spectrograms = result_spec.rowcount
+        
+        # Delete alerts
         result = db.execute(f"DELETE FROM alerts WHERE {where_clause}", params)
         db.commit()
         deleted_count = result.rowcount
-        return jsonify({'success': True, 'deleted': deleted_count})
+        
+        response = {'success': True, 'deleted': deleted_count}
+        if delete_spectrograms:
+            response['deleted_spectrograms'] = deleted_spectrograms
+        return jsonify(response)
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
@@ -323,24 +365,24 @@ def api_spectrograms():
     month = request.args.get('month')  # YYYY-MM
     year = request.args.get('year')  # YYYY
     
-    query = 'SELECT * FROM spectrograms'
+    query = 'SELECT * FROM spectrograms WHERE node_id IS NOT NULL AND node_id != ""'
     params = []
     
     if date:
         # Filter by specific date
-        query += ' WHERE DATE(timestamp) = ?'
+        query += ' AND DATE(timestamp) = ?'
         params.append(date)
     elif month:
         # Filter by month (YYYY-MM format)
-        query += ' WHERE strftime("%Y-%m", timestamp) = ?'
+        query += ' AND strftime("%Y-%m", timestamp) = ?'
         params.append(month)
     elif year:
         # Filter by year
-        query += ' WHERE strftime("%Y", timestamp) = ?'
+        query += ' AND strftime("%Y", timestamp) = ?'
         params.append(year)
     else:
         # Default: today's spectrograms
-        query += ' WHERE DATE(timestamp) = DATE("now")'
+        query += ' AND DATE(timestamp) = DATE("now")'
     
     query += ' ORDER BY timestamp DESC LIMIT 50'
     
@@ -367,11 +409,15 @@ def api_analyze_spectrogram(spec_id):
     if not spec:
         return jsonify({'error': 'Spectrogram not found'}), 404
     
+    # Check if force_cloud is requested (for re-analyzing offline detections with cloud AI)
+    force_cloud = request.args.get('force_cloud', 'false').lower() == 'true'
+    
     # Run analysis
     result = analyze_spectrogram(
         spec['image_path'],
         node_id=spec['node_id'],
-        location=(spec['lat'], spec['lon'])
+        location=(spec['lat'], spec['lon']),
+        force_cloud=force_cloud
     )
     
     # Check if rate limited
@@ -580,9 +626,10 @@ def api_get_ai_mode():
         'description': {
             'gpt4o': 'Azure GPT-4o Vision - Detailed analysis with reasoning',
             'custom_vision': 'Azure Custom Vision - Fast classification',
-            'auto': 'Auto - Custom Vision + GPT-4o verification for threats'
+            'auto': 'Auto - Custom Vision + GPT-4o verification for threats',
+            'local': 'Offline TFLite - Local inference without cloud'
         }.get(mode, 'Unknown mode'),
-        'available_modes': ['gpt4o', 'custom_vision', 'auto']
+        'available_modes': ['gpt4o', 'custom_vision', 'auto', 'local']
     })
 
 
@@ -617,6 +664,15 @@ def api_set_ai_mode():
 def api_ai_status():
     """Get AI services status including rate limit info"""
     rate_limit = get_rate_limit_status()
+    
+    # Check local model availability
+    local_available = False
+    try:
+        from local_inference import is_local_inference_available
+        local_available = is_local_inference_available()
+    except ImportError:
+        pass
+    
     status = {
         'current_mode': get_ai_mode(),
         'rate_limit': rate_limit,
@@ -629,10 +685,70 @@ def api_ai_status():
                 'configured': bool(Config.AZURE_CUSTOM_VISION_KEY and Config.AZURE_CUSTOM_VISION_ENDPOINT),
                 'project_id': Config.AZURE_CUSTOM_VISION_PROJECT_ID[:8] + '...' if Config.AZURE_CUSTOM_VISION_PROJECT_ID else None,
                 'iteration': Config.AZURE_CUSTOM_VISION_ITERATION
+            },
+            'local': {
+                'configured': local_available,
+                'model_path': 'ml/models/chainsaw_classifier.tflite'
             }
         }
     }
     return jsonify(status)
+
+
+# =============================================================================
+# OFFLINE SYNC API ENDPOINTS
+# =============================================================================
+
+@app.route('/api/sync/status')
+@login_required
+def api_sync_status():
+    """Get offline sync queue status"""
+    try:
+        from network_sync import get_queue_stats, get_network_status, is_online
+        return jsonify({
+            'success': True,
+            'network': get_network_status(),
+            'queue': get_queue_stats(),
+            'is_online': is_online()
+        })
+    except ImportError:
+        return jsonify({
+            'success': False,
+            'error': 'Network sync module not available'
+        })
+
+
+@app.route('/api/sync/trigger', methods=['POST'])
+@csrf.exempt
+@login_required
+def api_trigger_sync():
+    """Manually trigger sync of offline detections"""
+    try:
+        from network_sync import sync_pending_detections, is_online
+        
+        if not is_online():
+            return jsonify({
+                'success': False,
+                'error': 'No network connectivity'
+            }), 503
+        
+        result = sync_pending_detections()
+        
+        # Emit sync status to all clients
+        socketio.emit('sync_completed', result)
+        
+        return jsonify(result)
+    except ImportError:
+        return jsonify({
+            'success': False,
+            'error': 'Network sync module not available'
+        }), 500
+    except Exception as e:
+        logging.error(f"Sync error: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @app.route('/api/simulate/alert', methods=['POST'])
@@ -916,9 +1032,23 @@ def start_lora_receiver():
         logging.error(f"Failed to start LoRa subsystem: {e}")
 
 
+def start_background_sync_service():
+    """Start the background network sync service"""
+    try:
+        from network_sync import start_background_sync
+        start_background_sync()
+        logging.info("Background sync service started")
+    except ImportError:
+        logging.warning("Network sync module not available")
+    except Exception as e:
+        logging.error(f"Failed to start background sync: {e}")
+
+
 if __name__ == '__main__':
     # Start LoRa receiver only when running directly (not on import)
     start_lora_receiver()
+    # Start background sync service for offline detection queueing
+    start_background_sync_service()
     # Use socketio.run() with allow_unsafe_werkzeug for proper Socket.IO support
     # This enables real-time event delivery to clients
     socketio.run(app, host='0.0.0.0', port=5000, debug=False, allow_unsafe_werkzeug=True)

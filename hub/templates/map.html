@@ -1,49 +1,234 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+    .map-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .map-title-section {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .map-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .map-title svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #22d3ee;
+    }
+
+    .map-badge {
+        font-size: 0.625rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: 9999px;
+        background: rgba(59, 130, 246, 0.2);
+        color: #60a5fa;
+    }
+
+    .map-subtitle {
+        color: #9ca3af;
+        font-size: 0.8125rem;
+        width: 100%;
+        margin-top: 0.25rem;
+    }
+
+    .map-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+
+    .map-legend {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-size: 0.75rem;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .legend-dot {
+        width: 0.5rem;
+        height: 0.5rem;
+        border-radius: 50%;
+    }
+
+    .legend-dot.online {
+        background: #10b981;
+    }
+
+    .legend-dot.offline {
+        background: #6b7280;
+    }
+
+    .legend-dot.alert {
+        background: #ef4444;
+    }
+
+    .map-container-wrapper {
+        position: relative;
+        overflow: hidden;
+    }
+
+    #map {
+        width: 100%;
+        height: calc(100vh - 180px);
+        min-height: 350px;
+        max-height: 600px;
+    }
+
+    /* Info panel responsive */
+    #info-panel {
+        position: fixed;
+        bottom: 1rem;
+        right: 1rem;
+        width: 280px;
+        z-index: 1000;
+    }
+
+    @media screen and (max-width: 800px) {
+        .map-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .map-title {
+            font-size: 1rem;
+        }
+
+        .map-title svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        .map-subtitle {
+            display: none;
+        }
+
+        .map-badge {
+            font-size: 0.5rem;
+            padding: 0.125rem 0.375rem;
+        }
+
+        .map-legend {
+            font-size: 0.625rem;
+            gap: 0.5rem;
+        }
+
+        .legend-dot {
+            width: 0.375rem;
+            height: 0.375rem;
+        }
+
+        #map {
+            height: calc(100vh - 140px);
+            min-height: 280px;
+        }
+
+        #info-panel {
+            bottom: 0.5rem;
+            right: 0.5rem;
+            left: 0.5rem;
+            width: auto;
+        }
+
+        #info-panel .p-4 {
+            padding: 0.75rem;
+        }
+
+        .btn {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            min-height: 36px;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .map-legend {
+            display: none;
+        }
+
+        #map {
+            height: calc(100vh - 120px);
+            min-height: 250px;
+        }
+    }
+
+    /* Landscape mode for 5" display */
+    @media screen and (max-width: 800px) and (max-height: 480px) and (orientation: landscape) {
+        #map {
+            height: calc(100vh - 100px);
+            min-height: 200px;
+        }
+
+        .map-header {
+            margin-bottom: 0.25rem;
+        }
+    }
+</style>
+
 <!-- Page Header -->
-<div class="flex items-center justify-between mb-6">
-    <div>
-        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
-            <svg class="w-7 h-7 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+<div class="map-header">
+    <div class="map-title-section">
+        <h1 class="map-title">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
             </svg>
-            Live Map
-            <span class="text-xs px-2 py-1 rounded-full bg-blue-500/20 text-blue-400">Azure Maps</span>
+            <span>Live Map</span>
+            <span class="map-badge">Azure Maps</span>
         </h1>
-        <p class="text-gray-400 text-sm mt-1">Real-time view of nodes and alerts</p>
+        <p class="map-subtitle">Real-time view of nodes and alerts</p>
     </div>
-    <div class="flex items-center gap-3">
-        <!-- Map Legend -->
-        <div class="flex items-center gap-4 text-sm">
-            <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+    <div class="map-controls">
+        <div class="map-legend">
+            <div class="legend-item">
+                <div class="legend-dot online"></div>
                 <span class="text-gray-400">Online</span>
             </div>
-            <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-gray-500"></div>
+            <div class="legend-item">
+                <div class="legend-dot offline"></div>
                 <span class="text-gray-400">Offline</span>
             </div>
-            <div class="flex items-center gap-2">
-                <div class="w-3 h-3 rounded-full bg-red-500"></div>
+            <div class="legend-item">
+                <div class="legend-dot alert"></div>
                 <span class="text-gray-400">Alerts</span>
             </div>
         </div>
-        <button id="center-map" class="btn btn-secondary text-sm">
+        <button id="center-map" class="btn btn-secondary">
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" />
             </svg>
-            Center
+            <span>Center</span>
         </button>
     </div>
 </div>
 
 <!-- Map Container -->
-<div class="card overflow-hidden relative">
+<div class="card map-container-wrapper">
     <!-- Azure Maps CSS -->
     <link rel="stylesheet" href="https://atlas.microsoft.com/sdk/javascript/mapcontrol/3/atlas.min.css" type="text/css">
-    <div id="map" class="w-full h-[600px]"></div>
+    <div id="map"></div>
 
     <!-- Empty state overlay -->
     <div id="empty-state"

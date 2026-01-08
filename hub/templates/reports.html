@@ -1,97 +1,277 @@
 {% extends 'base.html' %}
 {% block content %}
+<style>
+    .reports-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1rem;
+        flex-wrap: wrap;
+    }
+
+    .reports-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: white;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .reports-title svg {
+        width: 1.5rem;
+        height: 1.5rem;
+        color: #a78bfa;
+    }
+
+    .reports-subtitle {
+        color: #9ca3af;
+        font-size: 0.8125rem;
+        margin-top: 0.25rem;
+    }
+
+    .reports-stats {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 0.75rem;
+        margin-bottom: 1rem;
+    }
+
+    .reports-stats .card {
+        padding: 0.875rem;
+    }
+
+    .reports-stats .stat-row {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .reports-stats .stat-icon {
+        width: 2.25rem;
+        height: 2.25rem;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .reports-stats .stat-icon svg {
+        width: 1.125rem;
+        height: 1.125rem;
+    }
+
+    .reports-stats .stat-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: white;
+        line-height: 1;
+    }
+
+    .reports-stats .stat-label {
+        font-size: 0.6875rem;
+        color: #9ca3af;
+    }
+
+    .reports-content-grid {
+        display: grid;
+        grid-template-columns: 2fr 1fr;
+        gap: 1rem;
+    }
+
+    @media screen and (max-width: 1024px) {
+        .reports-stats {
+            grid-template-columns: repeat(2, 1fr);
+        }
+
+        .reports-content-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    @media screen and (max-width: 800px) {
+        .reports-header {
+            margin-bottom: 0.75rem;
+        }
+
+        .reports-title {
+            font-size: 1rem;
+        }
+
+        .reports-title svg {
+            width: 1.25rem;
+            height: 1.25rem;
+        }
+
+        .reports-subtitle {
+            display: none;
+        }
+
+        .reports-stats {
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .reports-stats .card {
+            padding: 0.625rem;
+        }
+
+        .reports-stats .stat-icon {
+            width: 2rem;
+            height: 2rem;
+        }
+
+        .reports-stats .stat-icon svg {
+            width: 1rem;
+            height: 1rem;
+        }
+
+        .reports-stats .stat-value {
+            font-size: 1.25rem;
+        }
+
+        .reports-stats .stat-label {
+            font-size: 0.625rem;
+        }
+
+        .reports-content-grid {
+            gap: 0.75rem;
+        }
+
+        #refresh-report {
+            padding: 0.5rem 0.75rem;
+            font-size: 0.75rem;
+            min-height: 36px;
+        }
+
+        #refresh-report span {
+            display: none;
+        }
+    }
+
+    @media screen and (max-width: 480px) {
+        .reports-stats {
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.375rem;
+        }
+
+        .reports-stats .stat-icon {
+            display: none;
+        }
+    }
+
+    /* Landscape mode for 5" display */
+    @media screen and (max-width: 800px) and (max-height: 480px) and (orientation: landscape) {
+        .reports-stats {
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.375rem;
+        }
+
+        .reports-stats .stat-icon {
+            width: 1.75rem;
+            height: 1.75rem;
+        }
+
+        .reports-content-grid {
+            grid-template-columns: 3fr 2fr;
+        }
+    }
+</style>
+
 <!-- Page Header -->
-<div class="flex items-center justify-between mb-6">
+<div class="reports-header">
     <div>
-        <h1 class="text-2xl font-bold text-white flex items-center gap-3">
-            <svg class="w-7 h-7 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <h1 class="reports-title">
+            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                     d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
             </svg>
-            AI Reports
+            <span>AI Reports</span>
         </h1>
-        <p class="text-gray-400 text-sm mt-1">AI-generated analysis and insights</p>
+        <p class="reports-subtitle">AI-generated analysis and insights</p>
     </div>
-    <button id="refresh-report" class="btn btn-primary flex items-center gap-2">
+    <button id="refresh-report" class="btn btn-primary">
         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                 d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
         </svg>
-        Generate New Report
+        <span>Generate Report</span>
     </button>
 </div>
 
 <!-- Stats Row -->
-<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+<div class="reports-stats">
     <!-- Total Alerts -->
-    <div class="card p-4 bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-red-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card bg-gradient-to-br from-red-500/10 to-transparent border-red-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-red-500/20">
+                <svg class="text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
                 </svg>
             </div>
             <div>
-                <div id="alerts-today" class="text-2xl font-bold text-white">-</div>
-                <div class="text-xs text-gray-400">Alerts Today</div>
+                <div id="alerts-today" class="stat-value">-</div>
+                <div class="stat-label">Alerts Today</div>
             </div>
         </div>
     </div>
 
     <!-- Spectrograms -->
-    <div class="card p-4 bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-purple-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card bg-gradient-to-br from-purple-500/10 to-transparent border-purple-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-purple-500/20">
+                <svg class="text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2z" />
                 </svg>
             </div>
             <div>
-                <div id="specs-today" class="text-2xl font-bold text-white">-</div>
-                <div class="text-xs text-gray-400">Spectrograms</div>
+                <div id="specs-today" class="stat-value">-</div>
+                <div class="stat-label">Spectrograms</div>
             </div>
         </div>
     </div>
 
     <!-- Chainsaws -->
-    <div class="card p-4 bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-orange-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-orange-500/20">
+                <svg class="text-orange-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
             </div>
             <div>
-                <div id="chainsaw-count" class="text-2xl font-bold text-white">-</div>
-                <div class="text-xs text-gray-400">Chainsaws</div>
+                <div id="chainsaw-count" class="stat-value">-</div>
+                <div class="stat-label">Chainsaws</div>
             </div>
         </div>
     </div>
 
     <!-- Active Nodes -->
-    <div class="card p-4 bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
-        <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
-                <svg class="w-5 h-5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div class="card bg-gradient-to-br from-emerald-500/10 to-transparent border-emerald-500/20">
+        <div class="stat-row">
+            <div class="stat-icon bg-emerald-500/20">
+                <svg class="text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                         d="M9 3v2m6-2v2M9 19v2m6-2v2M5 9H3m2 6H3m18-6h-2m2 6h-2M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2zM9 9h6v6H9V9z" />
                 </svg>
             </div>
             <div>
-                <div id="node-count" class="text-2xl font-bold text-white">-</div>
-                <div class="text-xs text-gray-400">Active Nodes</div>
+                <div id="node-count" class="stat-value">-</div>
+                <div class="stat-label">Active Nodes</div>
             </div>
         </div>
     </div>
 </div>
 
 <!-- Main Content Grid -->
-<div class="grid grid-cols-1 xl:grid-cols-3 gap-6">
+<div class="reports-content-grid">
     <!-- Daily Report - Takes 2 columns -->
-    <div class="xl:col-span-2">
+    <div>
         <div class="card h-full">
             <div class="card-header border-b border-gray-800 p-4">
                 <div class="flex items-center justify-between">
@@ -119,7 +299,7 @@
     </div>
 
     <!-- Weekly Activity Chart -->
-    <div class="xl:col-span-1">
+    <div>
         <div class="card h-full">
             <div class="card-header border-b border-gray-800 p-4">
                 <h2 class="card-title flex items-center gap-2">

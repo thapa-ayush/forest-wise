@@ -101,6 +101,7 @@ def check_network_available() -> bool:
 def _analyze_with_local_inference(image_path: str, node_id: str, location, result: Dict) -> Dict[str, Any]:
     """
     Analyze spectrogram using local TFLite model (offline mode)
+    Queues detection for cloud sync when back online
     """
     try:
         from local_inference import analyze_spectrogram_local, is_local_inference_available
@@ -123,6 +124,32 @@ def _analyze_with_local_inference(image_path: str, node_id: str, location, resul
             result["reasoning"] = f"Local inference: {result['classification']} detected with {result['confidence']}% confidence"
             result["features_detected"] = [result["classification"]]
             result["recommended_action"] = "Verify with Azure AI when online" if result["threat_level"] in ["CRITICAL", "HIGH"] else "No action needed"
+            
+            # Queue for cloud sync if threat detected (for verification when back online)
+            if result["threat_level"] in ["CRITICAL", "HIGH", "MEDIUM"]:
+                try:
+                    from network_sync import queue_detection
+                    queue_id = queue_detection(
+                        node_id=node_id,
+                        detection_type=result["classification"],
+                        local_confidence=result["confidence"],
+                        local_classification=result["classification"],
+                        spectrogram_path=image_path,
+                        latitude=location[0] if location else None,
+                        longitude=location[1] if location else None,
+                        metadata={
+                            "threat_level": result["threat_level"],
+                            "local_inference_time_ms": result.get("inference_time_ms", 0),
+                            "all_predictions": result.get("all_predictions", [])
+                        }
+                    )
+                    result["sync_queued"] = True
+                    result["sync_queue_id"] = queue_id
+                    logger.info(f"Queued detection #{queue_id} for cloud sync")
+                except ImportError:
+                    logger.warning("network_sync module not available - detection not queued")
+                except Exception as e:
+                    logger.error(f"Failed to queue detection: {e}")
         else:
             result["error"] = local_result.get("error", "Local inference failed")
         
@@ -293,7 +320,7 @@ RESPOND IN THIS EXACT JSON FORMAT:
     "recommended_action": "What should rangers do"
 }"""
 
-def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[float, float] = (0, 0)) -> Dict[str, Any]:
+def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[float, float] = (0, 0), force_cloud: bool = False) -> Dict[str, Any]:
     """
     Analyze a spectrogram image using selected AI service
     
@@ -309,6 +336,7 @@ def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[floa
         image_path: Path to the spectrogram PNG/PGM file
         node_id: ID of the sensor node that captured the audio
         location: (latitude, longitude) tuple
+        force_cloud: If True, skip local mode and force cloud analysis (for re-verification)
         
     Returns:
         Dictionary with classification results
@@ -337,29 +365,42 @@ def analyze_spectrogram(image_path: str, node_id: str = "", location: Tuple[floa
         logger.error(result["error"])
         return result
     
+    # Determine effective mode
+    # If force_cloud is set, use cloud service regardless of current mode
+    effective_mode = current_ai_mode
+    if force_cloud and current_ai_mode == 'local':
+        # When forcing cloud from local mode, use auto (Custom Vision with verification)
+        effective_mode = 'auto'
+        logger.info("Force cloud requested, overriding local mode to use cloud AI")
+    
     # Check if local mode requested or if we should check network
-    use_local = current_ai_mode == 'local'
+    use_local = effective_mode == 'local' and not force_cloud
     network_available = True
     
     # For cloud modes, check network availability
-    if current_ai_mode in ['gpt4o', 'custom_vision', 'auto']:
+    if effective_mode in ['gpt4o', 'custom_vision', 'auto'] or force_cloud:
         network_available = check_network_available()
         if not network_available:
+            if force_cloud:
+                # User explicitly requested cloud but network unavailable
+                result["error"] = "Network unavailable for cloud verification"
+                result["success"] = False
+                return result
             logger.warning("Network unavailable, falling back to local inference")
             use_local = True
             result["offline"] = True
             result["offline_reason"] = "Network unavailable"
     
-    # Route to local inference if needed
+    # Route to local inference if needed (and not forcing cloud)
     if use_local:
         return _analyze_with_local_inference(image_path, node_id, location, result)
     
     # Route to appropriate cloud AI service based on mode
-    if current_ai_mode == 'custom_vision':
+    if effective_mode == 'custom_vision':
         return _analyze_with_custom_vision_full(image_path, node_id, location, result)
-    elif current_ai_mode == 'gpt4o':
+    elif effective_mode == 'gpt4o':
         return _analyze_with_gpt4o_vision(image_path, node_id, location, result)
-    elif current_ai_mode == 'auto':
+    elif effective_mode == 'auto':
         # Auto mode: Custom Vision for speed, GPT-4o for verification
         cv_result = analyze_with_custom_vision(image_path)
         if cv_result["success"]:

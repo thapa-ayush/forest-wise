@@ -376,7 +376,7 @@ def sync_pending_detections() -> Dict[str, Any]:
     Returns:
         Dictionary with sync results
     """
-    from ai_service import analyze_with_custom_vision, analyze_with_gpt4o
+    from ai_service import analyze_with_custom_vision, analyze_spectrogram
     
     result = {
         "success": True,
@@ -409,15 +409,21 @@ def sync_pending_detections() -> Dict[str, Any]:
                 result["items_failed"] += 1
                 continue
             
-            # Try Azure Custom Vision first (faster, cheaper)
+            # Use the main analyze_spectrogram function with cloud mode
             azure_result = None
             if item.get('spectrogram_path') and os.path.exists(item['spectrogram_path']):
+                # Use Custom Vision for sync (faster, cheaper)
                 azure_result = analyze_with_custom_vision(item['spectrogram_path'])
             
-            # If Custom Vision fails or returns low confidence, try GPT-4o
+            # If Custom Vision fails, use the full analyze_spectrogram with auto mode
             if not azure_result or not azure_result.get('success'):
                 if item.get('spectrogram_path') and os.path.exists(item['spectrogram_path']):
-                    azure_result = analyze_with_gpt4o(item['spectrogram_path'])
+                    # Use main analyze function which will route appropriately
+                    azure_result = analyze_spectrogram(
+                        item['spectrogram_path'],
+                        node_id=item.get('node_id', ''),
+                        location=(item.get('latitude') or 0, item.get('longitude') or 0)
+                    )
             
             if azure_result and azure_result.get('success'):
                 mark_item_synced(item['id'], azure_result)
