@@ -1,36 +1,68 @@
 # Forest Guardian - Machine Learning Pipeline
 
-This folder contains the ML pipeline for training and deploying a TinyML chainsaw detection model on ESP32.
+This folder contains the ML pipeline for training spectrogram classifiers for Azure Custom Vision.
+
+## Overview
+
+The Forest Guardian system uses **Azure AI** for sound classification instead of on-device ML:
+
+1. **ESP32 Node**: Generates mel spectrograms from audio (threshold-based anomaly detection)
+2. **Raspberry Pi Hub**: Receives spectrograms via LoRa
+3. **Azure GPT-4o Vision**: Analyzes spectrograms with high accuracy (~95%)
+4. **Azure Custom Vision**: Optional faster classifier trained on spectrograms
+
+## Training Data
+
+Training data is **NOT tracked in git** due to size. Download separately:
+
+```bash
+# Create directories
+mkdir -p audio_samples/{chainsaw,nature,vehicle}
+mkdir -p training_images/{chainsaw,nature,vehicle}
+
+# Download from Freesound or record your own samples
+# See scripts/download_data.py for automated download
+```
 
 ## Pipeline Steps
 
-1. **Data Collection**
-   - Place audio samples in `data/chainsaw/`, `data/forest/`, `data/hard_negatives/`
-   - Or run `scripts/download_data.py` to fetch from public sources
+### 1. Collect Audio Samples
+- Place chainsaw audio in `audio_samples/chainsaw/`
+- Place forest/nature sounds in `audio_samples/nature/`
+- Place vehicle sounds in `audio_samples/vehicle/`
 
-2. **Preprocessing**
-   - Run `scripts/preprocess.py` to convert audio to mel spectrograms
+### 2. Generate Spectrograms
+```bash
+python scripts/preprocess.py
+```
+This creates 64x64 mel spectrograms in `training_images/`
 
-3. **Training**
-   - Run `scripts/train.py` to train the CNN model locally
-   - Or run `scripts/azure_ml_train.py` to train on Azure ML
-
-4. **Conversion**
-   - Run `scripts/convert_tflite.py` to export to TFLite and C header
-
-## Model Architecture
-- Input: 40x32 mel spectrogram
-- Conv2D(8) → MaxPool → Conv2D(16) → MaxPool → Conv2D(32) → GlobalAvgPool → Dense(16) → Dense(1, sigmoid)
-- Output: Chainsaw confidence (0-1)
-- Size: <100KB (INT8 quantized)
-
-## Requirements
-```sh
-pip install -r requirements.txt
+### 3. Upload to Azure Custom Vision
+```bash
+cd ../hub
+python scripts/upload_custom_vision.py
 ```
 
-## Azure ML Integration
-See `scripts/azure_ml_train.py` for cloud training.
+### 4. Train in Azure Portal
+- Go to customvision.ai
+- Train iteration
+- Publish as "production"
 
-## License
-MIT
+## Files
+
+- `scripts/preprocess.py` - Convert audio to spectrograms
+- `scripts/download_data.py` - Download training data from Freesound
+- `requirements.txt` - Python dependencies
+
+## Model Architecture (Custom Vision)
+
+Azure Custom Vision handles architecture automatically. For reference:
+- Input: 64x64 RGB spectrogram images
+- Output: Classification (chainsaw, nature, vehicle)
+- Deployed as REST API endpoint
+
+## Requirements
+
+```bash
+pip install -r requirements.txt
+```

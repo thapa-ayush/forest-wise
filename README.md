@@ -445,9 +445,7 @@ forest-g/
 │   │   └── hard_negatives/   # Similar non-chainsaw sounds
 │   ├── scripts/
 │   │   ├── preprocess.py     # Audio to spectrogram conversion
-│   │   ├── train.py          # Local model training
-│   │   ├── azure_ml_train.py # Azure ML training
-│   │   └── convert_tflite.py # Export to TFLite
+│   │   └── download_data.py  # Download training data
 │   └── models/               # Trained model files
 │
 ├── azure/                    # Azure Functions
@@ -460,10 +458,9 @@ forest-g/
 │   ├── setup_guide.md        # Detailed setup instructions
 │   ├── hardware_assembly.md  # Hardware wiring guide
 │   ├── azure_setup.md        # Azure service configuration
-│   └── CONFIGURATION_GUIDE.md # Configuration reference
+│   ├── CONFIGURATION_GUIDE.md # Configuration reference
 │
-└── ei-forest-guardian-chainsaw-arduino-1.0.1/
-    └── forest-guardian-chainsaw_inferencing/  # Edge Impulse library (legacy)
+└── ei-forest-guardian-...    # (Legacy - not used)
 ```
 
 ---
@@ -561,7 +558,6 @@ This project is licensed under the MIT License - see [LICENSE](LICENSE) for deta
 ## 🙏 Acknowledgments
 
 - Microsoft Azure for cloud AI services
-- Edge Impulse for TinyML tooling
 - Heltec for excellent ESP32 LoRa modules
 - The open-source community for libraries and tools
 
