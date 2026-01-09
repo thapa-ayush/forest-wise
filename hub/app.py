@@ -62,6 +62,12 @@ with app.app_context():
 def index():
     return render_template('index.html')
 
+# Kiosk mode - optimized for small displays (800x480)
+# No login required for local kiosk display
+@app.route('/kiosk')
+def kiosk_view():
+    return render_template('kiosk.html')
+
 @app.route('/map')
 @login_required
 def map_view():
@@ -290,7 +296,6 @@ def api_risk_prediction():
     return jsonify({'risk_areas': []})
 
 @app.route('/api/lora/status')
-@login_required
 def api_lora_status():
     """Get LoRa receiver status and stats"""
     try:
@@ -362,7 +367,6 @@ def api_health():
 # =============================================================================
 
 @app.route('/api/spectrograms')
-@login_required
 def api_spectrograms():
     """Get list of recent spectrograms with optional date filtering"""
     date = request.args.get('date')  # YYYY-MM-DD
@@ -519,7 +523,6 @@ def api_spectrogram_stats():
 
 
 @app.route('/api/dashboard/stats')
-@login_required
 def api_dashboard_stats():
     """Get dashboard statistics with date filtering - optimized single query"""
     date = request.args.get('date')  # YYYY-MM-DD
@@ -601,7 +604,6 @@ def api_set_ai_mode():
 
 
 @app.route('/api/ai/status')
-@login_required
 def api_ai_status():
     """Get AI services status including rate limit info"""
     rate_limit = get_rate_limit_status()

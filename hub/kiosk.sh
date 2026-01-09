@@ -4,8 +4,22 @@
 # Auto-starts Chromium in fullscreen on boot
 # =============================================================================
 
-# Wait for desktop to fully load
-sleep 10
+# Wait for desktop and network to be ready
+sleep 5
+
+# Wait for Forest Guardian service to be ready
+echo "Waiting for Forest Guardian service..."
+for i in {1..30}; do
+    if curl -s http://localhost:5000 > /dev/null 2>&1; then
+        echo "Service is ready!"
+        break
+    fi
+    echo "Attempt $i/30 - waiting..."
+    sleep 2
+done
+
+# Give it a bit more time to fully initialize
+sleep 3
 
 # Disable screen blanking/screensaver
 xset s off
@@ -35,4 +49,4 @@ sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Defaul
     --disable-pinch \
     --overscroll-history-navigation=0 \
     --check-for-update-interval=31536000 \
-    http://localhost:5000
+    http://localhost:5000/kiosk

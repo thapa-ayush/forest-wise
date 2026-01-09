@@ -483,29 +483,16 @@ Access dashboard: `http://<pi-ip>:5000` (Default login: admin/admin123)
 
 ### 3. Production Deployment (Optional)
 
-I've set up the production environment with:
+For production deployment with custom domain, SSL, and kiosk mode, see **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)**
 
-```bash
-# Enable auto-start on boot
-sudo cp hub/forest-guardian.service /etc/systemd/system/
-sudo systemctl enable forest-guardian
-sudo systemctl start forest-guardian
+Quick summary:
+- **Systemd Service** - Auto-start on boot
+- **Nginx** - Reverse proxy with WebSocket support  
+- **Cloudflare Tunnel** - Secure public access (IPv4 + IPv6)
+- **SSL/TLS** - Automatic via Cloudflare
+- **Kiosk Mode** - Fullscreen display for Waveshare 5"
 
-# Set up Nginx reverse proxy
-sudo apt install nginx certbot python3-certbot-nginx
-sudo cp hub/nginx-forestwise.conf /etc/nginx/sites-available/forestwise.online
-sudo ln -s /etc/nginx/sites-available/forestwise.online /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-
-# Get SSL certificate (after DNS is configured)
-sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
-```
-
-**Kiosk Mode for Waveshare Display:**
-The `hub/kiosk.sh` script auto-launches the dashboard in fullscreen on boot. Copy the desktop entry to enable:
-```bash
-cp hub/kiosk.sh ~/.config/autostart/forest-guardian-kiosk.desktop
-```
+🌐 **Live Demo:** [https://forestwise.online](https://forestwise.online)
 
 ### 4. Flash ESP32 Firmware
 
@@ -520,11 +507,13 @@ cp hub/kiosk.sh ~/.config/autostart/forest-guardian-kiosk.desktop
 
 ### 5. Configure Azure Services
 
-See [docs/AZURE_SERVICES_SETUP.md](docs/AZURE_SERVICES_SETUP.md) for detailed setup:
+See [docs/AZURE_SETUP.md](docs/AZURE_SETUP.md) for detailed setup:
 - Azure OpenAI (GPT-4o Vision) - Most accurate analysis
 - Azure Custom Vision - Fast classification (88.9% accuracy)
 - Azure Maps - Interactive geospatial visualization
 - Azure Functions - Serverless alerts & reports
+
+---
 
 ## Live Demo
 
@@ -585,11 +574,14 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ## Author
 
-**Ayush Thapa**
-- Microsoft Imagine Cup 2026 Participant
-- GitHub: [@thapa-ayush](https://github.com/thapa-ayush)
-- Email: thapa.aayush@outlook.com
-- Mission: Protecting forests through technology
+**Ayush Thapa**  
+Microsoft Imagine Cup 2026 Participant
+
+- 🌐 Website: [forestwise.online](https://forestwise.online)
+- 📧 Email: thapa.aayush@outlook.com
+- 🐙 GitHub: [@thapa-ayush](https://github.com/thapa-ayush)
+
+*Mission: Protecting forests through technology*
 
 ---
 

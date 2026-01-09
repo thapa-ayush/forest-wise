@@ -1,0 +1,17 @@
+[Unit]
+Description=Forest Guardian Kiosk Display
+After=graphical-session.target forest-guardian.service
+Wants=forest-guardian.service
+PartOf=graphical-session.target
+
+[Service]
+Type=simple
+Environment=DISPLAY=:0
+Environment=XAUTHORITY=/home/forestguardain/.Xauthority
+ExecStartPre=/bin/sleep 10
+ExecStart=/home/forestguardain/forest-wise/hub/kiosk.sh
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target
