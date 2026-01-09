@@ -1,8 +1,12 @@
-# Forest Guardian: AI-Powered Illegal Logging Detection System
+# Forest Wise: AI-Powered Illegal Logging Detection System
 
 <div align="center">
 
-![Forest Guardian](https://img.shields.io/badge/Forest-Guardian-228B22?style=for-the-badge&logo=tree&logoColor=white)
+<img src="hub/static/images/logo.svg" alt="Forest Wise Logo" width="400">
+
+<br><br>
+
+![Forest Wise](https://img.shields.io/badge/Forest-Wise-228B22?style=for-the-badge&logo=tree&logoColor=white)
 ![Azure](https://img.shields.io/badge/Microsoft-Azure-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Heltac LoRa ESP32](https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white)
@@ -45,7 +49,7 @@
 
 ## Our Solution
 
-**Forest Guardian** is an end-to-end acoustic monitoring system that detects chainsaw activity **within seconds** using:
+**Forest Wise** is an end-to-end acoustic monitoring system that detects chainsaw activity **within seconds** using:
 
 <table>
 <tr>
@@ -66,7 +70,7 @@
 
 ### Key Innovation: Spectrogram-Based Detection
 
-Instead of transmitting raw audio (which would require too much bandwidth), Forest Guardian:
+Instead of transmitting raw audio (which would require too much bandwidth), Forest Wise:
 
 1. **Captures** 2-second audio samples at 16kHz
 2. **Generates** 32x32 mel-frequency spectrograms on-device
@@ -143,7 +147,7 @@ This approach enables **real-time detection** even in areas with **zero internet
 
 ## Azure Integration
 
-Forest Guardian leverages **4 Azure services** to deliver a comprehensive solution:
+Forest Wise leverages **4 Azure services** to deliver a comprehensive solution:
 
 ### 1. Azure OpenAI (GPT-4o Vision)
 **Purpose:** Primary AI analysis engine for spectrogram classification
@@ -525,7 +529,7 @@ See [docs/AZURE_SETUP.md](docs/AZURE_SETUP.md) for detailed setup:
 
 ### Environmental Impact
 
-| Metric | With Forest Guardian |
+| Metric | With Forest Wise |
 |--------|---------------------|
 | Detection Time | **< 1 minute** (vs days with satellites) |
 | Coverage Cost | **$45/node** (vs $1000s for cameras) |
@@ -553,7 +557,7 @@ Phase 3 (12 months): Commercial product
 
 ---
 
-## Why Forest Guardian Wins
+## Why Forest Wise Wins
 
 | Criteria | Our Advantage |
 |----------|---------------|
