@@ -500,8 +500,8 @@
                     const badge = sev === 'critical' ? 'CRITICAL' : 'HIGH';
                     const detectedAgo = timeAgo(s.timestamp);
                     const analyzedAgo = s.analyzed_at ? timeAgo(s.analyzed_at) : '';
-                    const svcMap = { 'gpt4o': 'GPT-4o', 'custom_vision': 'CV', 'local_tflite': 'TFLite' };
-                    const svc = svcMap[s.service_used] || s.service_used || '?';
+                    const svcMap = { 'gpt4o': 'GPT-4o', 'custom_vision': 'CV', 'local_tflite': 'TFLite', 'local': 'TFLite' };
+                    const svc = s.service_used ? (svcMap[s.service_used] || s.service_used) : 'pending';
                     return `
                         <div class="alert-item ${sev}">
                             <div class="alert-info">

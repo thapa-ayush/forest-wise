@@ -1070,7 +1070,7 @@
                     if (data.stats) {
                         const stats = data.stats;
                         document.getElementById('lora-packets').textContent = stats.packets_received || 0;
-                        document.getElementById('lora-specs').textContent = stats.spectrograms_saved || 0;
+                        document.getElementById('lora-specs').textContent = stats.spectrograms_received || 0;
 
                         if (stats.last_rssi !== undefined && stats.last_rssi !== null) {
                             document.getElementById('lora-rssi').textContent = stats.last_rssi + ' dBm';
