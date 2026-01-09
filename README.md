@@ -5,7 +5,7 @@
 ![Forest Guardian](https://img.shields.io/badge/Forest-Guardian-228B22?style=for-the-badge&logo=tree&logoColor=white)
 ![Azure](https://img.shields.io/badge/Microsoft-Azure-0089D6?style=for-the-badge&logo=microsoft-azure&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.13-3776AB?style=for-the-badge&logo=python&logoColor=white)
-![ESP32](https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white)
+![Heltac LoRa ESP32](https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
 ### **Microsoft Imagine Cup 2026 Entry**
