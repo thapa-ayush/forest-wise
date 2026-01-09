@@ -541,35 +541,44 @@
     }
 
     function loadStats() {
-        fetch('/api/spectrograms/stats')
-            .then(r => r.json())
+        fetch('/api/spectrograms/stats', { credentials: 'same-origin' })
+            .then(r => {
+                if (!r.ok) throw new Error('Not authenticated');
+                return r.json();
+            })
             .then(data => {
                 document.getElementById('specs-today').textContent = data.last_24h || 0;
                 document.getElementById('chainsaw-count').textContent = data.chainsaw_24h || 0;
             })
-            .catch(() => {
+            .catch(err => {
+                console.error('Stats error:', err);
                 document.getElementById('specs-today').textContent = '0';
                 document.getElementById('chainsaw-count').textContent = '0';
             });
 
-        fetch('/api/alerts')
-            .then(r => r.json())
+        fetch('/api/alerts', { credentials: 'same-origin' })
+            .then(r => {
+                if (!r.ok) throw new Error('Not authenticated');
+                return r.json();
+            })
             .then(data => {
                 const today = new Date().toDateString();
                 const todayAlerts = data.filter(a => new Date(a.timestamp).toDateString() === today).length;
                 document.getElementById('alerts-today').textContent = todayAlerts;
                 updateWeeklyChart(data);
             })
-            .catch(() => {
+            .catch(err => {
+                console.error('Alerts error:', err);
                 document.getElementById('alerts-today').textContent = '0';
             });
 
-        fetch('/api/nodes')
+        fetch('/api/nodes', { credentials: 'same-origin' })
             .then(r => r.json())
             .then(data => {
                 document.getElementById('node-count').textContent = data.length;
             })
-            .catch(() => {
+            .catch(err => {
+                console.error('Nodes error:', err);
                 document.getElementById('node-count').textContent = '0';
             });
     }
