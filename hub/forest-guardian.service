@@ -1,0 +1,23 @@
+[Unit]
+Description=Forest Guardian Hub - Illegal Logging Detection System
+After=network.target
+
+[Service]
+Type=simple
+User=forestguardain
+Group=forestguardain
+WorkingDirectory=/home/forestguardain/forest-wise/hub
+Environment="PATH=/home/forestguardain/forest-wise/hub/venv/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/home/forestguardain/forest-wise/hub/.env
+ExecStart=/home/forestguardain/forest-wise/hub/venv/bin/python3 app.py
+Restart=always
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=false
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

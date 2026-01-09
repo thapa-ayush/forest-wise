@@ -438,14 +438,16 @@ forest-g/
 
 - Python 3.11+ (3.13 recommended)
 - Arduino IDE 2.x
-- Raspberry Pi OS (64-bit)
-- Azure account (free tier sufficient for demo)
+- Raspberry Pi 5 with Raspberry Pi OS (64-bit)
+- Azure account (free tier works for demo)
+- (Optional) Waveshare 5" Display for kiosk mode
+- (Optional) Domain name for public access
 
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/thapa-ayush/forest-g.git
-cd forest-g
+git clone https://github.com/thapa-ayush/forest-wise.git
+cd forest-wise
 ```
 
 ### 2. Set Up Raspberry Pi Hub
@@ -458,18 +460,54 @@ pip install -r requirements.txt
 
 # Configure Azure credentials
 cp .env.example .env
-nano .env  # Add your keys
+nano .env  # Add your Azure keys (see .env.example for all options)
 
-# Initialize database
-python -c "from database import init_db; init_db()"
+# Extract TFLite model for local/offline inference
+cd ../ml/models
+unzip custom_vision_advanced.zip
+mv model.tflite chainsaw_classifier.tflite
+cd ../../hub
 
-# Run
+# Run the hub
 python app.py
 ```
 
-Access: `http://<pi-ip>:5000` (Default: admin/admin123)
+Access dashboard: `http://<pi-ip>:5000` (Default login: admin/admin123)
 
-### 3. Flash ESP32 Firmware
+**Required Azure Services:**
+| Service | Purpose | Required |
+|---------|---------|----------|
+| Azure Maps | Interactive node map | Yes |
+| Azure Custom Vision | Fast spectrogram classification | Recommended |
+| Azure OpenAI (GPT-4o) | Detailed AI analysis | Optional |
+
+### 3. Production Deployment (Optional)
+
+I've set up the production environment with:
+
+```bash
+# Enable auto-start on boot
+sudo cp hub/forest-guardian.service /etc/systemd/system/
+sudo systemctl enable forest-guardian
+sudo systemctl start forest-guardian
+
+# Set up Nginx reverse proxy
+sudo apt install nginx certbot python3-certbot-nginx
+sudo cp hub/nginx-forestwise.conf /etc/nginx/sites-available/forestwise.online
+sudo ln -s /etc/nginx/sites-available/forestwise.online /etc/nginx/sites-enabled/
+sudo nginx -t && sudo systemctl reload nginx
+
+# Get SSL certificate (after DNS is configured)
+sudo certbot --nginx -d yourdomain.com -d www.yourdomain.com
+```
+
+**Kiosk Mode for Waveshare Display:**
+The `hub/kiosk.sh` script auto-launches the dashboard in fullscreen on boot. Copy the desktop entry to enable:
+```bash
+cp hub/kiosk.sh ~/.config/autostart/forest-guardian-kiosk.desktop
+```
+
+### 4. Flash ESP32 Firmware
 
 ```bash
 # Arduino IDE -> File -> Open
@@ -480,13 +518,17 @@ Access: `http://<pi-ip>:5000` (Default: admin/admin123)
 # Upload
 ```
 
-### 4. Configure Azure (Optional for basic demo)
+### 5. Configure Azure Services
 
-See [docs/AZURE_SERVICES_SETUP.md](docs/AZURE_SERVICES_SETUP.md) for:
-- Azure OpenAI (GPT-4o Vision)
-- Azure Custom Vision
-- Azure Maps
-- Azure Functions
+See [docs/AZURE_SERVICES_SETUP.md](docs/AZURE_SERVICES_SETUP.md) for detailed setup:
+- Azure OpenAI (GPT-4o Vision) - Most accurate analysis
+- Azure Custom Vision - Fast classification (88.9% accuracy)
+- Azure Maps - Interactive geospatial visualization
+- Azure Functions - Serverless alerts & reports
+
+## Live Demo
+
+🌐 **Live Dashboard:** [https://forestwise.online](https://forestwise.online)
 
 ---
 
@@ -546,6 +588,7 @@ MIT License - See [LICENSE](LICENSE) for details.
 **Ayush Thapa**
 - Microsoft Imagine Cup 2026 Participant
 - GitHub: [@thapa-ayush](https://github.com/thapa-ayush)
+- Email: thapa.aayush@outlook.com
 - Mission: Protecting forests through technology
 
 ---
