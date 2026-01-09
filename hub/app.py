@@ -112,7 +112,6 @@ def api_status():
     return jsonify({'status': 'ok', 'time': datetime.utcnow().isoformat()})
 
 @app.route('/api/nodes')
-@login_required
 def api_nodes():
     # Get all nodes and calculate online status based on last_seen
     nodes = query_db('SELECT * FROM nodes')
@@ -136,7 +135,6 @@ def api_nodes():
     return jsonify(result)
 
 @app.route('/api/alerts')
-@login_required
 def api_alerts():
     unresponded_only = request.args.get('unresponded', 'false').lower() == 'true'
     
@@ -477,7 +475,6 @@ def api_spectrogram_image(filename):
 
 
 @app.route('/api/spectrograms/stats')
-@login_required
 def api_spectrogram_stats():
     """Get spectrogram analysis statistics"""
     stats = {}
