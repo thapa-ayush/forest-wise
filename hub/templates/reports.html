@@ -68,6 +68,10 @@
         font-weight: 700;
         color: white;
         line-height: 1;
+        background: none;
+        -webkit-background-clip: unset;
+        -webkit-text-fill-color: white;
+        background-clip: unset;
     }
 
     .reports-stats .stat-label {
@@ -130,6 +134,7 @@
 
         .reports-stats .stat-value {
             font-size: 1.25rem;
+            -webkit-text-fill-color: white;
         }
 
         .reports-stats .stat-label {
@@ -636,8 +641,10 @@
     });
 
     // Initial load
-    loadDailyReport();
-    loadStats();
+    document.addEventListener('DOMContentLoaded', function() {
+        loadDailyReport();
+        loadStats();
+    });
 
     // Auto-refresh stats every 30 seconds
     setInterval(loadStats, 30000);
