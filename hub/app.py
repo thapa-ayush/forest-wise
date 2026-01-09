@@ -897,13 +897,14 @@ def process_spectrogram_message(db, data, rssi, timestamp):
                 db.execute('''
                     UPDATE spectrograms 
                     SET classification = ?, confidence = ?, threat_level = ?, 
-                        ai_reasoning = ?, analyzed_at = ?
+                        ai_reasoning = ?, service_used = ?, analyzed_at = ?
                     WHERE id = ?
                 ''', [
                     result.get('classification'),
                     result.get('confidence'),
                     result.get('threat_level'),
                     result.get('reasoning'),
+                    result.get('service_used', 'unknown'),
                     datetime.utcnow(),
                     spec_id
                 ])
