@@ -147,7 +147,7 @@ This approach enables **real-time detection** even in areas with **zero internet
 
 ## Azure Integration
 
-Forest Wise leverages **4 Azure services** to deliver a comprehensive solution:
+Forest Wise leverages **3 Azure services** to deliver a comprehensive solution:
 
 ### 1. Azure OpenAI (GPT-4o Vision)
 **Purpose:** Primary AI analysis engine for spectrogram classification
@@ -197,12 +197,6 @@ Example Response:
 - Alert markers with GPS coordinates
 - Satellite/terrain view for forest terrain analysis
 - Distance calculations for ranger dispatch
-
-### 4. Azure Functions
-**Purpose:** Serverless event processing
-
-- **AlertProcessor:** Triggered on new detections, sends notifications
-- **DailyReport:** Generates daily summary emails for stakeholders
 
 ---
 
@@ -426,12 +420,6 @@ forest-g/
 |   +-- models/
 |       |-- chainsaw_classifier.tflite  # Exported model
 |       +-- labels.txt           # Class labels
-|
-+-- azure/                    # Azure Functions
-    |-- host.json                # Functions config
-    |-- requirements.txt         # Dependencies
-    |-- AlertProcessor/       # Alert webhook
-    +-- DailyReport/          # Daily email summary
 ```
 
 ---
@@ -515,7 +503,6 @@ See [docs/AZURE_SETUP.md](docs/AZURE_SETUP.md) for detailed setup:
 - Azure OpenAI (GPT-4o Vision) - Most accurate analysis
 - Azure Custom Vision - Fast classification (88.9% accuracy)
 - Azure Maps - Interactive geospatial visualization
-- Azure Functions - Serverless alerts & reports
 
 ---
 
