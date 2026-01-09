@@ -343,7 +343,8 @@
     <div class="container">
         <div class="header">
             <div class="logo">
-                🌲 Forest Guardian
+                <img src="/static/images/logo.svg" alt="Forest Guardian"
+                    style="height: 28px; width: auto; max-width: 180px;">
             </div>
 
             <div class="stats">
@@ -497,7 +498,8 @@
                 list.innerHTML = spectrograms.slice(0, 5).map(s => {
                     const sev = (s.confidence || 0) >= 85 ? 'critical' : 'high';
                     const badge = sev === 'critical' ? 'CRITICAL' : 'HIGH';
-                    const ago = timeAgo(s.timestamp);
+                    const detectedAgo = timeAgo(s.timestamp);
+                    const analyzedAgo = s.analyzed_at ? timeAgo(s.analyzed_at) : '';
                     const svcMap = { 'gpt4o': 'GPT-4o', 'custom_vision': 'CV', 'local_tflite': 'TFLite' };
                     const svc = svcMap[s.service_used] || s.service_used || '?';
                     return `
@@ -508,7 +510,7 @@
                             </div>
                             <div class="alert-meta">
                                 <span class="badge badge-${sev}">${badge}</span>
-                                <div class="alert-time">${ago}</div>
+                                <div class="alert-time">${detectedAgo}</div>
                             </div>
                         </div>
                     `;

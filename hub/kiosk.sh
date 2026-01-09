@@ -49,4 +49,9 @@ sed -i 's/"exit_type":"Crashed"/"exit_type":"Normal"/' ~/.config/chromium/Defaul
     --disable-pinch \
     --overscroll-history-navigation=0 \
     --check-for-update-interval=31536000 \
+    --disable-application-cache \
+    --disable-cache \
+    --disk-cache-size=0 \
+    --media-cache-size=0 \
+    --aggressive-cache-discard \
     http://localhost:5000/kiosk

@@ -66,7 +66,7 @@ def get_rate_limit_status() -> Dict[str, Any]:
 # Can be set via dashboard: 'gpt4o', 'custom_vision', 'auto', or 'local'
 # 'auto' uses Custom Vision for fast classification, GPT-4o for verification
 # 'local' uses offline TFLite model on Raspberry Pi
-current_ai_mode = 'gpt4o'  # Default mode
+current_ai_mode = os.getenv('DEFAULT_AI_MODE', 'local')  # Default to local TFLite
 
 def get_ai_mode():
     """Get current AI analysis mode"""
