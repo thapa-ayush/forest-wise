@@ -387,8 +387,8 @@ def api_spectrograms():
         query += ' AND strftime("%Y", timestamp) = ?'
         params.append(year)
     else:
-        # Default: today's spectrograms
-        query += ' AND DATE(timestamp) = DATE("now")'
+        # Default: today's spectrograms (use localtime to match stored timestamps)
+        query += ' AND DATE(timestamp) = DATE("now", "localtime")'
     
     query += ' ORDER BY timestamp DESC LIMIT 50'
     
