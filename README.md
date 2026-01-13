@@ -12,8 +12,6 @@
 ![Heltac LoRa ESP32](https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 
-### **Microsoft Imagine Cup 2026 Entry**
-
 **Real-time acoustic monitoring system that detects illegal logging using AI-powered sound classification, LoRa mesh networking, and Azure cloud services**
 
 *Developed by Ayush Thapa*
@@ -566,9 +564,8 @@ MIT License - See [LICENSE](LICENSE) for details.
 ## Author
 
 **Ayush Thapa**  
-Microsoft Imagine Cup 2026 Participant
 
-- 🌐 Website: [forestwise.online](https://forestwise.online)
+- 🌐 Website: [www.ayushthapa.com](https://www.ayushthapa.com)
 - 📧 Email: thapa.aayush@outlook.com
 - 🐙 GitHub: [@thapa-ayush](https://github.com/thapa-ayush)
 
@@ -579,8 +576,6 @@ Microsoft Imagine Cup 2026 Participant
 <div align="center">
 
 ### Protecting Forests, One Sound at a Time
-
-*Built for Microsoft Imagine Cup 2026*
 
 **[Back to Top](#forest-guardian-ai-powered-illegal-logging-detection-system)**
 
