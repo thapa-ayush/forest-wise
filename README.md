@@ -1,3 +1,5 @@
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18229364.svg)](https://doi.org/10.5281/zenodo.18229364)
+
 # Forest Wise: AI-Powered Illegal Logging Detection System
 
 <div align="center">
