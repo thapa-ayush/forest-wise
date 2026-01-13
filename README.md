@@ -575,6 +575,13 @@ MIT License - See [LICENSE](LICENSE) for details.
 
 ---
 
+## 📖 Cite this work
+
+Thapa, A. (2026). Forest Guardian: An Open-Source AI System for Real-Time Illegal
+Logging Detection. Zenodo. https://doi.org/10.5281/zenodo.18229219
+
+---
+
 <div align="center">
 
 ### Protecting Forests, One Sound at a Time
